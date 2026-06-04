@@ -73,8 +73,10 @@ export function Dashboard() {
       {/* Sticky header — faded country flag fills the bar when one is selected */}
       <div className="sticky top-0 z-20 -mx-4 overflow-hidden border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {selectedCountry && (
-          <div key={selectedCountry.code} className="pointer-events-none absolute inset-0 z-0 animate-fade-up opacity-[0.16]">
-            <Flag code={selectedCountry.code} fill className="h-full w-full" />
+          <div key={selectedCountry.code} className="pointer-events-none absolute inset-0 z-0 animate-fade-up" aria-hidden="true">
+            <Flag code={selectedCountry.code} fill className="h-full w-full opacity-[0.22]" />
+            {/* Fade the flag out toward the left so the title stays readable. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-paper via-paper/80 to-transparent" />
           </div>
         )}
         <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
