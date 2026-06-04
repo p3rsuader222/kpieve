@@ -74,9 +74,9 @@ export function Dashboard() {
       <div className="sticky top-0 z-20 -mx-4 overflow-hidden border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {selectedCountry && (
           <div key={selectedCountry.code} className="pointer-events-none absolute inset-0 z-0 animate-fade-up" aria-hidden="true">
-            <Flag code={selectedCountry.code} fill className="h-full w-full opacity-[0.22]" />
-            {/* Fade the flag out toward the left so the title stays readable. */}
-            <div className="absolute inset-0 bg-gradient-to-r from-paper via-paper/80 to-transparent" />
+            {/* Vivid, full-colour flag on the right; opaque only behind the title on the left. */}
+            <Flag code={selectedCountry.code} fill className="h-full w-full" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--paper)),hsl(var(--paper))_22%,transparent_46%)]" />
           </div>
         )}
         <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
