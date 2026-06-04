@@ -139,7 +139,7 @@ export function Settings() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-[1120px] space-y-4">
       <div>
         <p className="eyebrow">Configuration</p>
         <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">Settings</h1>

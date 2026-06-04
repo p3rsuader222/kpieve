@@ -63,7 +63,8 @@ export function TargetEditor({ data, saving, onSave }: Props) {
 
   const rows = useMemo(() => rowsForPeriods([period]), [values, period]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cols = `minmax(150px, 1.8fr) repeat(${markets.length}, minmax(72px, 1fr))`
+  // Fixed compact columns so single-number inputs never stretch across the page.
+  const cols = `minmax(200px, 280px) repeat(${markets.length}, 92px)`
 
   return (
     <div className="space-y-4">
