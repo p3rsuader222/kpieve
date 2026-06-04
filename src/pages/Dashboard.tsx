@@ -70,9 +70,14 @@ export function Dashboard() {
 
   return (
     <div className="space-y-4">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Sticky header — faded country flag fills the bar when one is selected */}
+      <div className="sticky top-0 z-20 -mx-4 overflow-hidden border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        {selectedCountry && (
+          <div key={selectedCountry.code} className="pointer-events-none absolute inset-0 z-0 animate-fade-up opacity-[0.16]">
+            <Flag code={selectedCountry.code} fill className="h-full w-full" />
+          </div>
+        )}
+        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span
               className={cn(
@@ -117,22 +122,13 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* LEFT column — matrix · detail · trend, joined */}
-        <div className="card relative divide-y divide-line overflow-hidden xl:col-span-8">
-          {selectedCountry && (
-            <div
-              key={selectedCountry.code}
-              className="pointer-events-none absolute -right-10 -top-10 z-0 animate-fade-up opacity-[0.06]"
-              aria-hidden="true"
-            >
-              <Flag code={selectedCountry.code} size={380} />
-            </div>
-          )}
-          <section className="relative z-10 p-4">
+        <div className="card divide-y divide-line xl:col-span-8">
+          <section className="p-4">
             <SectionHead eyebrow="Country × KPI" title="Targets & progress by country" />
             <CountryMatrix data={data} period={activePeriod} selected={selectedMarket} onSelect={setSelectedMarket} />
           </section>
 
-          <section className="relative z-10 p-4">
+          <section className="p-4">
             <SectionHead
               eyebrow="Monthly detail · click to focus a KPI"
               title={
@@ -171,7 +167,7 @@ export function Dashboard() {
             </div>
           </section>
 
-          <section className="relative z-10 p-4">
+          <section className="p-4">
             <SectionHead
               eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
               title="Trend over time"

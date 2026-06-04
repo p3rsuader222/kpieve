@@ -35,14 +35,33 @@ interface Props {
   code: string
   size?: number // width in px (height keeps the 10:7 ratio)
   className?: string
+  /** Stretch the stripes to fill the parent (for use as a faded background band). */
+  fill?: boolean
 }
 
 /** Small, crisp national flag for a market code. */
-export function Flag({ code, size = 20, className }: Props) {
+export function Flag({ code, size = 20, className, fill = false }: Props) {
   const id = useId()
   const stripes = STRIPES[code.toUpperCase()] ?? []
   const w = size
   const h = Math.round((size * 14) / 20)
+
+  if (fill) {
+    return (
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 20 14"
+        preserveAspectRatio="none"
+        className={cn(className)}
+        aria-hidden="true"
+      >
+        {stripes.map((s, i) => (
+          <rect key={i} x="0" y={s.o} width="20" height={s.h} fill={s.c} />
+        ))}
+      </svg>
+    )
+  }
 
   return (
     <svg
