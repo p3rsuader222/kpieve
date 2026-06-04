@@ -79,9 +79,10 @@ Restart `npm run dev`. You'll now get the login screen and live data.
   5 KPI cards. Below: month‑over‑month trend (Total / Market / Member split), team
   leaderboard, per‑KPI breakdown, and the member × market heatmap. Light/dark toggle in
   the sidebar.
-- **Update** (`/update`) — pick the **month**, type each member's number per country for
-  each KPI (column headers show the per‑country target), then **Save all**. Re‑opening a
-  month shows what's already saved so you can correct it.
+- **Update** (`/update`) — pick the **day**, type each member's number per country for each
+  KPI (column headers show the per‑country monthly target and the month‑to‑date total), then
+  **Save all**. A daily **Entry log** lists the days already filled this month — click one to
+  view/edit it. Entries are stored per day and roll up to the month on the dashboard.
 - **Settings** (`/settings`) — edit the **per‑country / per‑month Targets** grid, add /
   rename KPIs, and manage team members and the markets they cover. No code required.
 
@@ -89,9 +90,10 @@ Restart `npm run dev`. You'll now get the login screen and live data.
 
 ## How metrics roll up
 
-A **month** is stored as its first day (`yyyy-MM-01`). The authoritative per‑country/month
+Entries are logged **per day** (`yyyy-MM-dd`) and rolled up to the month: SUM KPIs add up
+across days (and members/markets), AVG KPIs take the mean. The authoritative per‑country/month
 target lives in the **`targets`** table (falling back to a KPI's `default_target`); a
-country's Fact is the aggregate of its members' entries for that month.
+country's Fact is the monthly aggregate of its members' daily entries.
 
 Each KPI has an **aggregation**:
 - **Sum** (e.g. *Sellers with 1st active offer*, *PHH ads*, *FBP*) — facts and targets add

@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Database, Save } from 'lucide-react'
+import { CalendarDays, Database, Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { activeKpis, activeMembers, cellTarget, monthStart, periodTarget } from '@/lib/metrics'
+import {
+  activeKpis,
+  activeMembers,
+  entryDaysInMonth,
+  monthStart,
+  periodFact,
+  periodTarget,
+} from '@/lib/metrics'
 import { formatCompact } from '@/lib/format'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { usingMockData, type EntryUpsert } from '@/data/datasource'
@@ -17,20 +24,13 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
 
-/** Round an even-split target sensibly for storage on a member entry. */
-function splitTargetValue(data: DashboardData, kpi: Kpi, marketId: string, period: string): number | null {
-  const t = cellTarget(data, kpi, marketId, period)
-  if (t == null) return null
-  return Math.round(t * 100) / 100
-}
-
 export function Update() {
   const { data, isLoading } = useDashboard()
   const upsert = useUpsertEntries()
   const toast = useToast()
 
-  const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'))
-  const period = `${month}-01`
+  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const period = monthStart(date)
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
 
@@ -38,19 +38,20 @@ export function Update() {
   const members = data ? activeMembers(data) : []
   const activeKpi = kpis.find((k) => k.id === activeKpiId) ?? kpis[0]
 
-  // Prefill from entries already saved for the chosen month.
+  // Prefill from entries already saved for the chosen day.
   useEffect(() => {
     if (!data) return
     const next: Record<string, string> = {}
     for (const e of data.entries) {
-      if (monthStart(e.date) === period && e.member_id && e.market_id) {
+      if (e.date === date && e.member_id && e.market_id) {
         next[keyOf(e.kpi_id, e.member_id, e.market_id)] = String(e.value)
       }
     }
     setValues(next)
-  }, [data, period])
+  }, [data, date])
 
-  const dirtyRows = useMemo(() => collectRows(values, data, period), [values, data, period])
+  const dirtyRows = useMemo(() => collectRows(values, data, date), [values, data, date])
+  const log = useMemo(() => (data ? entryDaysInMonth(data, period) : []), [data, period])
 
   if (isLoading || !data || !activeKpi) return <UpdateSkeleton />
 
@@ -72,31 +73,30 @@ export function Update() {
     }
     try {
       await upsert.mutateAsync(dirtyRows)
-      const label = format(parseISO(period), 'MMMM yyyy')
-      toast.success(`Saved ${dirtyRows.length} value${dirtyRows.length === 1 ? '' : 's'} for ${label}.`)
+      toast.success(`Saved ${dirtyRows.length} value${dirtyRows.length === 1 ? '' : 's'} for ${format(parseISO(date), 'd MMM')}.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed.')
     }
   }
 
-  const cols = `minmax(132px, 1.6fr) repeat(${markets.length}, minmax(84px, 1fr))`
+  const cols = `minmax(150px, 1.7fr) repeat(${markets.length}, minmax(96px, 1fr))`
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Monthly entry</p>
-          <h1 className="mt-1.5 font-display text-3xl font-medium tracking-tight text-ink">Update KPIs</h1>
-          <p className="mt-2 text-sm text-ink-muted">Enter each member's monthly number per country, then save.</p>
+          <p className="eyebrow">Daily entry</p>
+          <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink">Update KPIs</h1>
+          <p className="mt-2 text-sm text-ink-muted">Log each member's numbers for the day — progress rolls up to the month.</p>
         </div>
         <div className="flex items-end gap-2.5">
           <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Month</span>
+            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Day</span>
             <input
-              type="month"
-              value={month}
-              max={format(new Date(), 'yyyy-MM')}
-              onChange={(e) => setMonth(e.target.value)}
+              type="date"
+              value={date}
+              max={format(new Date(), 'yyyy-MM-dd')}
+              onChange={(e) => setDate(e.target.value)}
               className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </label>
@@ -117,78 +117,131 @@ export function Update() {
         </div>
       )}
 
-      <Panel eyebrow={`${filledForKpi} of ${totalForKpi} entered`} title={activeKpi.name}>
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {kpis.map((k) => (
-            <button
-              key={k.id}
-              onClick={() => setActiveKpiId(k.id)}
-              className={cn(
-                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                k.id === activeKpi.id
-                  ? 'bg-brand text-brand-contrast'
-                  : 'border border-line bg-surface text-ink-muted hover:text-ink',
-              )}
-            >
-              {k.name}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Entry grid */}
+        <Panel
+          className="lg:col-span-2"
+          eyebrow={`${format(parseISO(date), 'EEEE, d MMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
+          title={activeKpi.name}
+        >
+          {/* KPI selector — its own island */}
+          <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-line bg-surface-2/40 p-1.5">
+            {kpis.map((k) => (
+              <button
+                key={k.id}
+                onClick={() => setActiveKpiId(k.id)}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  k.id === activeKpi.id
+                    ? 'bg-brand text-brand-contrast shadow-card'
+                    : 'text-ink-muted hover:bg-surface hover:text-ink',
+                )}
+              >
+                {k.name}
+              </button>
+            ))}
+          </div>
 
-        <div className="overflow-x-auto">
-          <div className="min-w-[460px]">
-            <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
-              <span className="eyebrow self-end">Member</span>
-              {markets.map((m) => {
-                const t = periodTarget(data, activeKpi.id, m.id, period)
-                return (
-                  <div key={m.id} className="flex flex-col items-center gap-1">
-                    <Flag code={m.code} size={22} />
-                    <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
-                    <span className="tnum text-2xs text-ink-muted/80">
-                      tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="space-y-2">
-              {members.map((member) => (
-                <div key={member.id} className="grid items-center gap-2" style={{ gridTemplateColumns: cols }}>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="sm" />
-                    <span className="truncate text-sm font-medium text-ink">{member.name}</span>
-                  </div>
-                  {markets.map((market) => {
-                    const covered = member.marketIds.includes(market.id)
-                    const k = keyOf(activeKpi.id, member.id, market.id)
-                    if (!covered) {
+          {/* Aligned table island */}
+          <div className="overflow-x-auto">
+            <div className="min-w-[480px] overflow-hidden rounded-xl border border-line">
+              <div
+                className="grid items-end gap-3 border-b border-line bg-surface-2/50 px-4 py-3"
+                style={{ gridTemplateColumns: cols }}
+              >
+                <span className="eyebrow self-end">Member</span>
+                {markets.map((m) => {
+                  const t = periodTarget(data, activeKpi.id, m.id, period)
+                  const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
+                  return (
+                    <div key={m.id} className="flex flex-col items-center gap-1">
+                      <Flag code={m.code} size={22} />
+                      <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
+                      <span className="tnum text-2xs leading-tight text-ink-muted/80">
+                        tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
+                        {' · '}
+                        {mtd != null ? formatCompact(mtd, activeKpi.format) : '0'} so far
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="divide-y divide-line">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="grid items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2/30"
+                    style={{ gridTemplateColumns: cols }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="sm" />
+                      <span className="truncate text-sm font-medium text-ink">{member.name}</span>
+                    </div>
+                    {markets.map((market) => {
+                      const covered = member.marketIds.includes(market.id)
+                      const k = keyOf(activeKpi.id, member.id, market.id)
+                      if (!covered) {
+                        return (
+                          <div key={market.id} className="grid h-9 place-items-center rounded-lg border border-dashed border-line text-ink-muted/40">
+                            ·
+                          </div>
+                        )
+                      }
                       return (
-                        <div key={market.id} className="grid h-9 place-items-center rounded-lg border border-dashed border-line text-ink-muted/40">
-                          ·
-                        </div>
+                        <input
+                          key={market.id}
+                          type="number"
+                          inputMode="decimal"
+                          step="any"
+                          value={values[k] ?? ''}
+                          onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
+                          className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                        />
                       )
-                    }
-                    const share = splitTargetValue(data, activeKpi, market.id, period)
-                    return (
-                      <input
-                        key={market.id}
-                        type="number"
-                        inputMode="decimal"
-                        step="any"
-                        value={values[k] ?? ''}
-                        placeholder={share != null ? String(share) : ''}
-                        onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                        className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                      />
-                    )
-                  })}
-                </div>
-              ))}
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </Panel>
+        </Panel>
+
+        {/* Daily entry log */}
+        <Panel eyebrow={format(parseISO(period), 'MMMM yyyy')} title="Entry log">
+          {log.length === 0 ? (
+            <p className="py-8 text-center text-sm text-ink-muted">No entries this month yet.</p>
+          ) : (
+            <ol className="space-y-1">
+              {log.map((d) => {
+                const selected = d.date === date
+                return (
+                  <li key={d.date}>
+                    <button
+                      onClick={() => setDate(d.date)}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                        selected
+                          ? 'border-brand/40 bg-brand-soft'
+                          : 'border-transparent hover:bg-surface-2',
+                      )}
+                    >
+                      <CalendarDays size={16} className={selected ? 'text-brand' : 'text-ink-muted'} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-ink">{format(parseISO(d.date), 'EEE, d MMM')}</p>
+                        <p className="tnum text-2xs text-ink-muted">{d.count} value{d.count === 1 ? '' : 's'} logged</p>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+          <p className="mt-3 border-t border-line pt-3 text-2xs text-ink-muted">
+            Pick a day above or here to view and edit that day's numbers. The dashboard always shows the monthly roll-up.
+          </p>
+        </Panel>
+      </div>
     </div>
   )
 }
@@ -196,7 +249,7 @@ export function Update() {
 function collectRows(
   values: Record<string, string>,
   data: DashboardData | undefined,
-  period: string,
+  date: string,
 ): EntryUpsert[] {
   if (!data) return []
   const kpiById = new Map<string, Kpi>(data.kpis.map((k) => [k.id, k]))
@@ -206,14 +259,14 @@ function collectRows(
     const num = Number(raw)
     if (Number.isNaN(num)) continue
     const [kpi_id, member_id, market_id] = key.split(':')
-    const kpi = kpiById.get(kpi_id)
+    if (!kpiById.has(kpi_id)) continue
     rows.push({
       kpi_id,
       member_id,
       market_id,
-      date: period, // month start yyyy-MM-01
+      date, // a real day (yyyy-MM-dd); rolls up to the month in the engine
       value: num,
-      target: kpi ? splitTargetValue(data, kpi, market_id, period) : null,
+      target: null,
     })
   }
   return rows
@@ -226,7 +279,10 @@ function UpdateSkeleton() {
         <Skeleton className="h-9 w-56" />
         <Skeleton className="h-10 w-64" />
       </div>
-      <Skeleton className="h-80 w-full rounded-xl" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Skeleton className="h-80 rounded-xl lg:col-span-2" />
+        <Skeleton className="h-80 rounded-xl" />
+      </div>
     </div>
   )
 }

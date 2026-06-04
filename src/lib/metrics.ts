@@ -1,4 +1,4 @@
-import { addDays, format, parseISO, startOfMonth, subMonths } from 'date-fns'
+import { addDays, endOfMonth, format, parseISO, startOfMonth, subMonths } from 'date-fns'
 import type { DashboardData, Entry, Kpi, KpiAggregation, Market, Member, TimeRange } from './types'
 import { attainment, deltaIsGood, statusFromAttainment, type Status } from './status'
 
@@ -57,15 +57,36 @@ export function totalTarget(data: DashboardData, kpi: Kpi, period: string): numb
   return kpi.aggregation === 'sum' ? vals.reduce((s, v) => s + v, 0) : vals.reduce((s, v) => s + v, 0) / vals.length
 }
 
-/** Aggregated FACT for (kpi, month) optionally scoped to a market/member. */
+/** Last day of the month that `period` (a month-start) belongs to. */
+export function monthEnd(period: string): string {
+  return format(endOfMonth(parseISO(period)), 'yyyy-MM-dd')
+}
+
+/**
+ * Aggregated FACT for (kpi, month) optionally scoped to a market/member.
+ * Rolls up ALL daily entries within the month: SUM KPIs add up across days
+ * (and members/markets), AVG KPIs take the mean over the period.
+ */
 export function periodFact(
   data: DashboardData,
   kpi: Kpi,
   period: string,
   scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
 ): number | null {
-  const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start: period, end: period })
+  const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start: period, end: monthEnd(period) })
   return aggregate(rows, kpi.aggregation).value
+}
+
+/** Distinct days within `period`'s month that have entries, newest first, with a value count. */
+export function entryDaysInMonth(data: DashboardData, period: string): { date: string; count: number }[] {
+  const end = monthEnd(period)
+  const counts = new Map<string, number>()
+  for (const e of data.entries) {
+    if (e.date >= period && e.date <= end) counts.set(e.date, (counts.get(e.date) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, z) => (a.date < z.date ? 1 : -1))
 }
 
 // ---------- Filtering & ranges ----------

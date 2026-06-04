@@ -48,6 +48,9 @@ const TARGET_TABLE: Record<string, Record<string, number>> = {
 
 const MONTHS_BACK = 3 // → 4 months of history including the current month
 
+/** Day-of-month cadence Evelina enters updates on (used to scatter daily mock entries). */
+const CADENCE = [4, 9, 14, 19, 24, 28]
+
 function round(n: number, decimals: number) {
   const f = 10 ** decimals
   return Math.round(n * f) / f
@@ -59,17 +62,17 @@ function coveringMembers(marketId: string): Member[] {
 }
 
 /**
- * Build a full, deterministic monthly mock dataset ending this month.
+ * Build a full, deterministic mock dataset of ~4 months of DAILY entries.
  *
- * Entries are stored at month-start dates (yyyy-MM-01) at member×market level so
- * country/total roll-ups and the member leaderboard look real. Each member entry
- * carries an even split of the country target (sum KPIs) or the country target
- * itself (avg KPIs) so the existing aggregate() reconstructs the right country and
- * TOTAL targets. The authoritative per-country/month targets live in `targets`.
+ * Entries are scattered across an update-day cadence at member×market level; the
+ * metrics engine rolls them up to the month (SUM adds across days, AVG means them).
+ * The current month only has entries up to "today" so it reads as in-progress.
+ * Targets are per country/month and live in `targets` (authoritative).
  */
 export function buildMockData(): DashboardData {
   const rng = mulberry32(20260604)
   const thisMonth = startOfMonth(new Date())
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
   const periods: string[] = []
   for (let k = MONTHS_BACK; k >= 0; k--) {
     periods.push(format(subMonths(thisMonth, k), 'yyyy-MM-dd'))
@@ -113,37 +116,49 @@ export function buildMockData(): DashboardData {
 
         factor = Math.max(0.55, Math.min(1.25, factor))
 
-        for (let mi = 0; mi < members.length; mi++) {
-          const member = members[mi]
+        const prefix = period.slice(0, 7) // yyyy-MM
+        for (const member of members) {
           const s = skill[`${member.id}:${market.id}`]
+
           if (isSum) {
+            // Distribute the month's whole units across the update-day cadence.
             const share = countryTarget / n
-            const memberFactor = factor * (1 + s * 0.4)
-            const value = Math.max(0, round(share * memberFactor, decimals))
-            entries.push({
-              id: `e${id++}`,
-              kpi_id: kpi.id,
-              member_id: member.id,
-              market_id: market.id,
-              date: period,
-              value,
-              target: round(countryTarget / n, decimals === 0 ? 2 : decimals),
-              note: null,
-              source: 'manual',
+            const monthTotal = Math.max(0, Math.round(share * factor * (1 + s * 0.4)))
+            const perDay = new Array(CADENCE.length).fill(0)
+            for (let u = 0; u < monthTotal; u++) perDay[u % CADENCE.length]++
+            CADENCE.forEach((day, di) => {
+              const date = `${prefix}-${String(day).padStart(2, '0')}`
+              if (date > todayStr || perDay[di] === 0) return
+              entries.push({
+                id: `e${id++}`,
+                kpi_id: kpi.id,
+                member_id: member.id,
+                market_id: market.id,
+                date,
+                value: perDay[di],
+                target: null,
+                note: null,
+                source: 'manual',
+              })
             })
           } else {
-            // lower_better percent: factor>1 means worse (above target).
-            const value = Math.max(0, round(countryTarget * factor * (1 + s * 0.3), decimals))
-            entries.push({
-              id: `e${id++}`,
-              kpi_id: kpi.id,
-              member_id: member.id,
-              market_id: market.id,
-              date: period,
-              value,
-              target: countryTarget,
-              note: null,
-              source: 'manual',
+            // AVG percent (late rate): one reading per update day; month = mean.
+            CADENCE.forEach((day) => {
+              const date = `${prefix}-${String(day).padStart(2, '0')}`
+              if (date > todayStr) return
+              const dayWobble = 1 + (rng() - 0.5) * 0.18
+              const value = Math.max(0, round(countryTarget * factor * (1 + s * 0.3) * dayWobble, decimals))
+              entries.push({
+                id: `e${id++}`,
+                kpi_id: kpi.id,
+                member_id: member.id,
+                market_id: market.id,
+                date,
+                value,
+                target: null,
+                note: null,
+                source: 'manual',
+              })
             })
           }
         }

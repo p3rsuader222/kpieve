@@ -56,8 +56,9 @@ create table if not exists public.entries (
   source     text not null default 'manual' check (source in ('manual','sheet')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  -- v2: a "month" is represented by its first day (yyyy-MM-01). This unique key
-  -- then enforces one value per KPI / member / market / month → clean upserts.
+  -- Entries are logged per real day (yyyy-MM-dd) and rolled up to the month by the
+  -- app. This unique key enforces one value per KPI / member / market / day → clean
+  -- upserts on daily edits.
   constraint entries_uniq unique (kpi_id, member_id, market_id, date)
 );
 
