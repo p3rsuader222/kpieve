@@ -1,4 +1,14 @@
-import { addDays, endOfMonth, format, parseISO, startOfMonth, subMonths } from 'date-fns'
+import {
+  addDays,
+  eachDayOfInterval,
+  eachWeekOfInterval,
+  endOfMonth,
+  format,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from 'date-fns'
 import type { DashboardData, Entry, Kpi, KpiAggregation, Market, Member, TimeRange } from './types'
 import { attainment, deltaIsGood, statusFromAttainment, type Status } from './status'
 
@@ -74,6 +84,45 @@ export function periodFact(
   scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
 ): number | null {
   const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start: period, end: monthEnd(period) })
+  return aggregate(rows, kpi.aggregation).value
+}
+
+export type Granularity = 'day' | 'week' | 'month'
+
+function clampToday(d: Date): Date {
+  const now = new Date()
+  return d > now ? now : d
+}
+
+/** Ascending bucket-start strings for the trend at a given granularity. */
+export function trendBuckets(data: DashboardData, granularity: Granularity, period: string): string[] {
+  if (granularity === 'month') return listPeriods(data)
+  const start = parseISO(period)
+  const end = clampToday(parseISO(monthEnd(period)))
+  if (start > end) return []
+  if (granularity === 'day') {
+    return eachDayOfInterval({ start, end }).map((d) => format(d, 'yyyy-MM-dd'))
+  }
+  return eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).map((d) =>
+    format(startOfWeek(d, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+  )
+}
+
+function bucketEndOf(start: string, granularity: Granularity): string {
+  if (granularity === 'month') return monthEnd(start)
+  if (granularity === 'week') return format(addDays(parseISO(start), 6), 'yyyy-MM-dd')
+  return start
+}
+
+/** Aggregated fact for a single trend bucket (day / week / month). */
+export function bucketFact(
+  data: DashboardData,
+  kpi: Kpi,
+  start: string,
+  granularity: Granularity,
+  scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
+): number | null {
+  const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start, end: bucketEndOf(start, granularity) })
   return aggregate(rows, kpi.aggregation).value
 }
 

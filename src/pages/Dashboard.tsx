@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
-import { activeKpis, listPeriods, monthStart, snapshotsForPeriod } from '@/lib/metrics'
+import { activeKpis, listPeriods, monthStart, snapshotsForPeriod, type Granularity } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
 import { Button, buttonClasses } from '@/components/ui/Button'
-import { Panel } from '@/components/ui/Panel'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Flag } from '@/components/ui/Flag'
@@ -23,11 +22,31 @@ const SPLITS: { value: SplitBy; label: string }[] = [
   { value: 'member', label: 'Member' },
 ]
 
+const GRANS: { value: Granularity; label: string }[] = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+]
+
+/** Section header used inside the joined column cards. */
+function SectionHead({ eyebrow, title, actions }: { eyebrow: string; title: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="eyebrow mb-0.5">{eyebrow}</p>
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold leading-tight text-ink">{title}</h2>
+      </div>
+      {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
+    </div>
+  )
+}
+
 export function Dashboard() {
   const { data, isLoading, isFetching, refetch } = useDashboard()
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedMarket, setSelectedMarket] = useState<string | null>(null) // null = TOTAL
   const [splitBy, setSplitBy] = useState<SplitBy>('none')
+  const [granularity, setGranularity] = useState<Granularity>('month')
   const [selectedKpiId, setSelectedKpiId] = useState<string | null>(null)
 
   const periods = data ? listPeriods(data) : []
@@ -41,13 +60,10 @@ export function Dashboard() {
     [data, activePeriod, scope],
   )
 
-  const scopeLabel = selectedMarket
-    ? data?.markets.find((m) => m.id === selectedMarket)?.name ?? 'Country'
-    : 'All countries'
-
   if (isLoading || !data || !selectedKpi) return <DashboardSkeleton />
 
   const selectedCountry = selectedMarket ? data.markets.find((m) => m.id === selectedMarket) ?? null : null
+  const scopeLabel = selectedCountry?.name ?? 'All countries'
 
   return (
     <div className="space-y-4">
@@ -70,89 +86,96 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Summary strip — also hosts the persistent country-scope indicator */}
-      <SummaryBar
-        snaps={snaps}
-        period={activePeriod}
-        scopeLabel={scopeLabel}
-        scopeCountry={selectedCountry ? { code: selectedCountry.code, name: selectedCountry.name } : null}
-        onClearScope={() => setSelectedMarket(null)}
-      />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        {/* LEFT column — matrix · detail · trend, joined */}
+        <div className="card divide-y divide-line xl:col-span-8">
+          <section className="p-4">
+            <SectionHead eyebrow="Country × KPI" title="Targets & progress by country" />
+            <CountryMatrix data={data} period={activePeriod} selected={selectedMarket} onSelect={setSelectedMarket} />
+          </section>
 
-      {/* Matrix (hero) + leaderboard */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Panel
-          className="lg:col-span-8"
-          eyebrow="Country × KPI"
-          title="Targets & progress by country"
-          actions={
-            selectedMarket && (
-              <Button variant="subtle" size="sm" onClick={() => setSelectedMarket(null)}>
-                Show total
-              </Button>
-            )
-          }
-        >
-          <CountryMatrix data={data} period={activePeriod} selected={selectedMarket} onSelect={setSelectedMarket} />
-        </Panel>
+          <section className="p-4">
+            <SectionHead
+              eyebrow="Monthly detail · click to focus a KPI"
+              title={
+                <>
+                  {selectedCountry && <Flag code={selectedCountry.code} size={20} />}
+                  {scopeLabel}
+                </>
+              }
+            />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              {snaps.map((snap) => {
+                const selected = snap.kpi.id === selectedKpi.id
+                return (
+                  <div
+                    key={snap.kpi.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={selected}
+                    aria-label={`Focus ${snap.kpi.name}`}
+                    onClick={() => setSelectedKpiId(snap.kpi.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedKpiId(snap.kpi.id)
+                      }
+                    }}
+                    className={cn(
+                      'cursor-pointer rounded-xl transition-transform duration-200 focus-visible:outline-none',
+                      selected && 'ring-2 ring-brand ring-offset-2 ring-offset-surface',
+                    )}
+                  >
+                    <KpiCard snap={snap} />
+                  </div>
+                )
+              })}
+            </div>
+          </section>
 
-        <Panel className="lg:col-span-4" eyebrow="Ranking" title="Team leaderboard">
-          <MemberLeaderboard data={data} period={activePeriod} />
-        </Panel>
-      </div>
-
-      {/* Focused detail — 5 KPI cards in one row */}
-      <div>
-        <h2 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold text-ink">
-          {selectedCountry && <Flag code={selectedCountry.code} size={20} />}
-          {scopeLabel}
-          <span className="text-xs font-sans font-normal text-ink-muted">monthly detail · click to focus a KPI</span>
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-          {snaps.map((snap) => {
-            const selected = snap.kpi.id === selectedKpi.id
-            return (
-              <div
-                key={snap.kpi.id}
-                role="button"
-                tabIndex={0}
-                aria-pressed={selected}
-                aria-label={`Focus ${snap.kpi.name}`}
-                onClick={() => setSelectedKpiId(snap.kpi.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setSelectedKpiId(snap.kpi.id)
-                  }
-                }}
-                className={cn(
-                  'cursor-pointer rounded-xl transition-transform duration-200 focus-visible:outline-none',
-                  selected && 'ring-2 ring-brand ring-offset-2 ring-offset-paper',
-                )}
-              >
-                <KpiCard snap={snap} />
-              </div>
-            )
-          })}
+          <section className="p-4">
+            <SectionHead
+              eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
+              title="Trend over time"
+              actions={
+                <>
+                  <SegmentedControl ariaLabel="Granularity" size="sm" segments={GRANS} value={granularity} onChange={setGranularity} />
+                  <SegmentedControl ariaLabel="Split by" size="sm" segments={SPLITS} value={splitBy} onChange={setSplitBy} />
+                </>
+              }
+            />
+            <TrendChart
+              data={data}
+              kpi={selectedKpi}
+              splitBy={splitBy}
+              granularity={granularity}
+              period={activePeriod}
+              marketId={selectedMarket}
+            />
+          </section>
         </div>
-      </div>
 
-      {/* Trend + coverage heatmap */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Panel
-          className="lg:col-span-8"
-          eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
-          title="Trend over time"
-          actions={
-            <SegmentedControl ariaLabel="Split by" size="sm" segments={SPLITS} value={splitBy} onChange={setSplitBy} />
-          }
-        >
-          <TrendChart data={data} kpi={selectedKpi} splitBy={splitBy} marketId={selectedMarket} />
-        </Panel>
+        {/* RIGHT column — summary · leaderboard · coverage, joined */}
+        <div className="card divide-y divide-line xl:col-span-4">
+          <section className="p-4">
+            <SummaryBar
+              snaps={snaps}
+              period={activePeriod}
+              scopeCountry={selectedCountry ? { code: selectedCountry.code, name: selectedCountry.name } : null}
+              onClearScope={() => setSelectedMarket(null)}
+            />
+          </section>
 
-        <Panel className="lg:col-span-4" eyebrow="Coverage · all KPIs" title="Member × market">
-          <AdherenceHeatmap data={data} period={activePeriod} />
-        </Panel>
+          <section className="p-4">
+            <SectionHead eyebrow="Ranking" title="Team leaderboard" />
+            <MemberLeaderboard data={data} period={activePeriod} />
+          </section>
+
+          <section className="p-4">
+            <SectionHead eyebrow="Coverage · all KPIs" title="Member × market" />
+            <AdherenceHeatmap data={data} period={activePeriod} />
+          </section>
+        </div>
       </div>
     </div>
   )
@@ -165,15 +188,9 @@ function DashboardSkeleton() {
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-10 w-72" />
       </div>
-      <Skeleton className="h-24 w-full rounded-xl" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Skeleton className="h-80 rounded-xl lg:col-span-8" />
-        <Skeleton className="h-80 rounded-xl lg:col-span-4" />
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-44 w-full rounded-xl" />
-        ))}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <Skeleton className="h-[640px] rounded-xl xl:col-span-8" />
+        <Skeleton className="h-[640px] rounded-xl xl:col-span-4" />
       </div>
     </div>
   )

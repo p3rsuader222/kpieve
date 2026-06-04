@@ -14,10 +14,11 @@ import {
 import { formatCompact, formatValue } from '@/lib/format'
 import {
   activeMembers,
-  listPeriods,
-  periodFact,
+  bucketFact,
   periodTarget,
   totalTarget,
+  trendBuckets,
+  type Granularity,
 } from '@/lib/metrics'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { useThemeColors } from '@/hooks/useThemeColors'
@@ -26,10 +27,15 @@ export type SplitBy = 'none' | 'market' | 'member'
 
 const MARKET_COLORS = ['#0A7AFF', '#32C998', '#E8A100', '#CE3247']
 
+const AXIS_FMT: Record<Granularity, string> = { day: 'd', week: 'd MMM', month: 'MMM' }
+const TIP_FMT: Record<Granularity, string> = { day: 'EEE, d MMM', week: "'Week of' d MMM", month: 'MMMM yyyy' }
+
 interface Props {
   data: DashboardData
   kpi: Kpi
   splitBy: SplitBy
+  granularity: Granularity
+  period: string
   /** When set, the "Total" line + target reflect this single country. */
   marketId?: string | null
 }
@@ -40,53 +46,55 @@ interface SeriesDef {
   color: string
 }
 
-export function TrendChart({ data, kpi, splitBy, marketId }: Props) {
+export function TrendChart({ data, kpi, splitBy, granularity, period, marketId }: Props) {
   const c = useThemeColors()
 
   const { rows, series, target } = useMemo(() => {
-    const periods = listPeriods(data)
+    const buckets = trendBuckets(data, granularity, period)
     const rowMap = new Map<string, Record<string, number | string | null>>()
-    periods.forEach((p) => rowMap.set(p, { date: p }))
+    buckets.forEach((b) => rowMap.set(b, { date: b }))
 
     let series: SeriesDef[] = []
 
     if (splitBy === 'none') {
-      periods.forEach((p) => (rowMap.get(p)!.value = periodFact(data, kpi, p, marketId ? { marketId } : {})))
+      buckets.forEach((b) => (rowMap.get(b)!.value = bucketFact(data, kpi, b, granularity, marketId ? { marketId } : {})))
       series = [{ key: 'value', label: kpi.name, color: c.brand }]
     } else if (splitBy === 'market') {
       data.markets
         .slice()
         .sort((a, z) => a.sort_order - z.sort_order)
         .forEach((m, i) => {
-          periods.forEach((p) => (rowMap.get(p)![`m_${m.id}`] = periodFact(data, kpi, p, { marketId: m.id })))
+          buckets.forEach((b) => (rowMap.get(b)![`m_${m.id}`] = bucketFact(data, kpi, b, granularity, { marketId: m.id })))
           series.push({ key: `m_${m.id}`, label: m.code, color: MARKET_COLORS[i % MARKET_COLORS.length] })
         })
     } else {
       activeMembers(data).forEach((m) => {
-        periods.forEach((p) => (rowMap.get(p)![`u_${m.id}`] = periodFact(data, kpi, p, { memberId: m.id })))
+        buckets.forEach((b) => (rowMap.get(b)![`u_${m.id}`] = bucketFact(data, kpi, b, granularity, { memberId: m.id })))
         series.push({ key: `u_${m.id}`, label: m.initials, color: m.color })
       })
     }
 
-    // Target reference (latest month) — country target when scoped, else TOTAL.
-    const last = periods.length ? periods[periods.length - 1] : null
+    // Target reference only for the monthly view (country target when scoped, else TOTAL).
+    const last = buckets.length ? buckets[buckets.length - 1] : null
     const target =
-      splitBy === 'none' && last
+      granularity === 'month' && splitBy === 'none' && last
         ? marketId
           ? periodTarget(data, kpi.id, marketId, last)
           : totalTarget(data, kpi, last)
         : null
 
-    return { rows: periods.map((p) => rowMap.get(p)!), series, target }
-  }, [data, kpi, splitBy, marketId, c.brand])
+    return { rows: buckets.map((b) => rowMap.get(b)!), series, target }
+  }, [data, kpi, splitBy, granularity, period, marketId, c.brand])
 
   if (rows.length < 2) {
     return (
       <div className="grid h-[230px] place-items-center text-sm text-ink-muted">
-        Not enough monthly history yet.
+        Not enough {granularity === 'month' ? 'monthly' : granularity === 'week' ? 'weekly' : 'daily'} data yet.
       </div>
     )
   }
+
+  const minTickGap = granularity === 'day' ? 24 : granularity === 'week' ? 8 : 12
 
   return (
     <ResponsiveContainer width="100%" height={236}>
@@ -102,11 +110,11 @@ export function TrendChart({ data, kpi, splitBy, marketId }: Props) {
         <CartesianGrid stroke={c.line} strokeDasharray="3 4" vertical={false} />
         <XAxis
           dataKey="date"
-          tickFormatter={(d) => format(parseISO(d), 'MMM')}
+          tickFormatter={(d) => format(parseISO(d), AXIS_FMT[granularity])}
           tick={{ fill: c['ink-muted'], fontSize: 11 }}
           axisLine={{ stroke: c.line }}
           tickLine={false}
-          minTickGap={12}
+          minTickGap={minTickGap}
           dy={8}
         />
         <YAxis
@@ -125,7 +133,7 @@ export function TrendChart({ data, kpi, splitBy, marketId }: Props) {
             label={{ value: `Target ${formatCompact(target, kpi.format)}`, position: 'insideTopRight', fill: c['ink-muted'], fontSize: 10 }}
           />
         )}
-        <Tooltip content={<TrendTooltip kpi={kpi} series={series} surface={c.surface} line={c.line} ink={c.ink} muted={c['ink-muted']} />} />
+        <Tooltip content={<TrendTooltip kpi={kpi} granularity={granularity} surface={c.surface} line={c.line} ink={c.ink} muted={c['ink-muted']} />} />
         {splitBy === 'none'
           ? series.map((s) => (
               <Area
@@ -168,14 +176,14 @@ interface TooltipProps {
   label?: string
   payload?: Array<{ name: string; value: number; color: string }>
   kpi: Kpi
-  series: SeriesDef[]
+  granularity: Granularity
   surface: string
   line: string
   ink: string
   muted: string
 }
 
-function TrendTooltip({ active, label, payload, kpi, surface, line, ink, muted }: TooltipProps) {
+function TrendTooltip({ active, label, payload, kpi, granularity, surface, line, ink, muted }: TooltipProps) {
   if (!active || !payload?.length || !label) return null
   return (
     <div
@@ -183,7 +191,7 @@ function TrendTooltip({ active, label, payload, kpi, surface, line, ink, muted }
       style={{ background: surface, borderColor: line, color: ink }}
     >
       <div className="mb-1.5 font-semibold" style={{ color: muted }}>
-        {format(parseISO(label), 'MMMM yyyy')}
+        {format(parseISO(label), TIP_FMT[granularity])}
       </div>
       <div className="space-y-1">
         {payload.map((p) => (
