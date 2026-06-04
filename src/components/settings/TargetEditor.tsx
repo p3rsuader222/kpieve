@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
-import { Save } from 'lucide-react'
+import { CalendarRange, Save } from 'lucide-react'
 import { activeKpis, periodTarget } from '@/lib/metrics'
 import type { DashboardData } from '@/lib/types'
 import type { TargetUpsert } from '@/data/datasource'
@@ -37,17 +37,31 @@ export function TargetEditor({ data, saving, onSave }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, period])
 
-  const rows = useMemo<TargetUpsert[]>(() => {
+  const year = month.slice(0, 4)
+
+  // Build target rows for an arbitrary set of months from the current grid.
+  function rowsForPeriods(periods: string[]): TargetUpsert[] {
     const out: TargetUpsert[] = []
     for (const [key, raw] of Object.entries(values)) {
       if (raw == null || raw.trim() === '') continue
       const num = Number(raw)
       if (Number.isNaN(num)) continue
       const [kpi_id, market_id] = key.split(':')
-      out.push({ kpi_id, market_id, period, value: num })
+      for (const p of periods) out.push({ kpi_id, market_id, period: p, value: num })
     }
     return out
-  }, [values, period])
+  }
+
+  // Every month from the selected one through December of the same year.
+  const monthsToDec = useMemo(() => {
+    const y = Number(month.slice(0, 4))
+    const m = Number(month.slice(5, 7))
+    const out: string[] = []
+    for (let mm = m; mm <= 12; mm++) out.push(`${y}-${String(mm).padStart(2, '0')}-01`)
+    return out
+  }, [month])
+
+  const rows = useMemo(() => rowsForPeriods([period]), [values, period]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cols = `minmax(150px, 1.8fr) repeat(${markets.length}, minmax(72px, 1fr))`
 
@@ -63,10 +77,22 @@ export function TargetEditor({ data, saving, onSave }: Props) {
             className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           />
         </label>
-        <Button variant="primary" size="md" onClick={() => onSave(rows)} disabled={saving}>
-          <Save size={16} />
-          {saving ? 'Saving…' : 'Save targets'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => onSave(rowsForPeriods(monthsToDec))}
+            disabled={saving}
+            title={`Apply this grid to every month from ${format(new Date(period), 'MMM')} through December ${year}`}
+          >
+            <CalendarRange size={16} />
+            Fill to Dec {year}
+          </Button>
+          <Button variant="primary" size="md" onClick={() => onSave(rows)} disabled={saving}>
+            <Save size={16} />
+            {saving ? 'Saving…' : 'Save month'}
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -106,7 +132,9 @@ export function TargetEditor({ data, saving, onSave }: Props) {
         </div>
       </div>
       <p className="text-2xs text-ink-muted">
-        Targets are stored per country and month. Leaving a cell blank skips it (the KPI's default target applies).
+        Targets are stored per country and month. <strong className="font-semibold text-ink-soft">Save month</strong> writes
+        just {format(new Date(period), 'MMMM yyyy')}; <strong className="font-semibold text-ink-soft">Fill to Dec {year}</strong> copies
+        this grid to every remaining month of the year (you can then fine-tune any month). Blank cells are skipped.
       </p>
     </div>
   )

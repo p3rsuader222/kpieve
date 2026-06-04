@@ -84,7 +84,6 @@
 
   body {
     @apply bg-paper text-ink font-sans antialiased;
-    font-feature-settings: 'cv01', 'cv02', 'ss01';
     min-height: 100dvh;
   }
 

@@ -6,8 +6,8 @@ import {
   activeKpis,
   byMarketPeriod,
   byMemberPeriod,
-  latestPeriod,
   listPeriods,
+  monthStart,
   snapshotsForPeriod,
 } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -40,7 +40,7 @@ export function Dashboard() {
   const [selectedKpiId, setSelectedKpiId] = useState<string | null>(null)
 
   const periods = data ? listPeriods(data) : []
-  const activePeriod = period ?? (data ? latestPeriod(data) : '')
+  const activePeriod = period ?? (data ? monthStart(new Date()) : '')
   const kpis = data ? activeKpis(data) : []
   const selectedKpi = kpis.find((k) => k.id === selectedKpiId) ?? kpis[0]
 

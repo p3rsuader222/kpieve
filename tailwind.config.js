@@ -32,8 +32,8 @@ export default {
         'bad-soft': 'hsl(var(--bad-soft) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['Outfit', '"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Sora', '"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.04em' }],
