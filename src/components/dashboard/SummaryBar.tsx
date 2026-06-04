@@ -1,16 +1,18 @@
+import { format, parseISO } from 'date-fns'
 import { formatPercent } from '@/lib/format'
 import type { KpiSnapshot } from '@/lib/metrics'
 import { STATUS_LABEL, type Status } from '@/lib/status'
-import type { TimeRange } from '@/lib/types'
 import { ProgressRing } from './ProgressRing'
 
-const RANGE_LABEL: Record<TimeRange, string> = {
-  today: 'latest day',
-  week: 'last 7 days',
-  month: 'last 30 days',
-}
-
-export function SummaryBar({ snaps, range }: { snaps: KpiSnapshot[]; range: TimeRange }) {
+export function SummaryBar({
+  snaps,
+  period,
+  scopeLabel,
+}: {
+  snaps: KpiSnapshot[]
+  period: string
+  scopeLabel?: string
+}) {
   const scored = snaps.filter((s) => s.status !== 'none')
   const counts: Record<Status, number> = { good: 0, warn: 0, bad: 0, none: 0 }
   for (const s of snaps) counts[s.status]++
@@ -40,7 +42,10 @@ export function SummaryBar({ snaps, range }: { snaps: KpiSnapshot[]; range: Time
           <h2 className="mt-1 max-w-[15ch] text-balance font-display text-xl font-semibold leading-tight text-ink">
             {counts.good} of {scored.length} KPIs meeting target
           </h2>
-          <p className="mt-1 text-xs text-ink-muted">Across the {RANGE_LABEL[range]}</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            {scopeLabel ? `${scopeLabel} · ` : ''}
+            {format(parseISO(period), 'MMMM yyyy')}
+          </p>
         </div>
       </div>
 

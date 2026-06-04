@@ -1,6 +1,72 @@
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, format, parseISO, startOfMonth, subMonths } from 'date-fns'
 import type { DashboardData, Entry, Kpi, KpiAggregation, Market, Member, TimeRange } from './types'
 import { attainment, deltaIsGood, statusFromAttainment, type Status } from './status'
+
+// ---------- Monthly periods (v2) ----------
+
+/** Normalise any ISO date to its month-start string (yyyy-MM-01). */
+export function monthStart(date: string | Date): string {
+  const d = typeof date === 'string' ? parseISO(date) : date
+  return format(startOfMonth(d), 'yyyy-MM-dd')
+}
+
+/** The month immediately before `period`. */
+export function prevPeriod(period: string): string {
+  return format(subMonths(parseISO(period), 1), 'yyyy-MM-dd')
+}
+
+export function nextPeriod(period: string): string {
+  return format(subMonths(parseISO(period), -1), 'yyyy-MM-dd')
+}
+
+/** Distinct month-start periods present in the data, ascending. */
+export function listPeriods(data: DashboardData): string[] {
+  const set = new Set<string>()
+  for (const e of data.entries) set.add(monthStart(e.date))
+  for (const t of data.targets) set.add(t.period)
+  return [...set].sort()
+}
+
+/** Most recent month present (falls back to the current month). */
+export function latestPeriod(data: DashboardData): string {
+  const periods = listPeriods(data)
+  return periods.length ? periods[periods.length - 1] : monthStart(new Date())
+}
+
+/** Authoritative per-country target for (kpi, market, month); falls back to default_target. */
+export function periodTarget(
+  data: DashboardData,
+  kpiId: string,
+  marketId: string,
+  period: string,
+): number | null {
+  const row = data.targets.find(
+    (t) => t.kpi_id === kpiId && t.market_id === marketId && t.period === period,
+  )
+  if (row) return row.value
+  const kpi = data.kpis.find((k) => k.id === kpiId)
+  return kpi?.default_target ?? null
+}
+
+/** Sum of country targets across all markets for (kpi, month) — the TOTAL target. */
+export function totalTarget(data: DashboardData, kpi: Kpi, period: string): number | null {
+  const vals = data.markets
+    .map((m) => periodTarget(data, kpi.id, m.id, period))
+    .filter((v): v is number => v != null)
+  if (vals.length === 0) return null
+  return kpi.aggregation === 'sum' ? vals.reduce((s, v) => s + v, 0) : vals.reduce((s, v) => s + v, 0) / vals.length
+}
+
+/** Aggregated FACT for (kpi, month) optionally scoped to a market/member. */
+export function periodFact(
+  data: DashboardData,
+  kpi: Kpi,
+  period: string,
+  scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
+): number | null {
+  const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start: period, end: period })
+  return aggregate(rows, kpi.aggregation).value
+}
 
 // ---------- Filtering & ranges ----------
 
@@ -277,4 +343,190 @@ export function activeMembers(data: DashboardData): Member[] {
 
 export function marketById(data: DashboardData, id: string | null): Market | undefined {
   return id ? data.markets.find((m) => m.id === id) : undefined
+}
+
+// ============================================================
+//  Period-based engine (v2 — country-first, monthly cadence)
+// ============================================================
+
+export interface PeriodScope {
+  memberId?: string
+  marketId?: string
+}
+
+/** Active members covering a market. */
+export function coveringMembers(data: DashboardData, marketId: string): Member[] {
+  return activeMembers(data).filter((m) => m.marketIds.includes(marketId))
+}
+
+/**
+ * Target to compare a single member×market cell against: the country target is
+ * split evenly across covering members for SUM KPIs (each owns a share), and kept
+ * whole for AVG KPIs (everyone aims at the same average).
+ */
+export function cellTarget(data: DashboardData, kpi: Kpi, marketId: string, period: string): number | null {
+  const ct = periodTarget(data, kpi.id, marketId, period)
+  if (ct == null) return null
+  if (kpi.aggregation !== 'sum') return ct
+  const n = Math.max(1, coveringMembers(data, marketId).length)
+  return ct / n
+}
+
+/** A member's target for a KPI/month: sum of their per-market shares (sum KPIs) or the mean target (avg KPIs). */
+export function memberTargetForPeriod(data: DashboardData, kpi: Kpi, member: Member, period: string): number | null {
+  const vals = member.marketIds
+    .map((mid) => (kpi.aggregation === 'sum' ? cellTarget(data, kpi, mid, period) : periodTarget(data, kpi.id, mid, period)))
+    .filter((v): v is number => v != null)
+  if (vals.length === 0) return null
+  return kpi.aggregation === 'sum' ? vals.reduce((s, v) => s + v, 0) : vals.reduce((s, v) => s + v, 0) / vals.length
+}
+
+/** Monthly fact/target series across every period present (one point per month). */
+export function monthlySeries(data: DashboardData, kpi: Kpi, scope: PeriodScope = {}): SeriesPoint[] {
+  return listPeriods(data).map((period) => ({
+    date: period,
+    value: periodFact(data, kpi, period, scope),
+    target: scope.marketId
+      ? periodTarget(data, kpi.id, scope.marketId, period)
+      : totalTarget(data, kpi, period),
+  }))
+}
+
+/** Snapshot for a single month, scoped to a market (country), the whole team (TOTAL), or a member. */
+export function snapshotForPeriod(
+  data: DashboardData,
+  kpi: Kpi,
+  period: string,
+  scope: PeriodScope = {},
+): KpiSnapshot {
+  const value = periodFact(data, kpi, period, scope)
+  const target = scope.memberId
+    ? memberTargetForPeriod(data, kpi, data.members.find((m) => m.id === scope.memberId)!, period)
+    : scope.marketId
+      ? periodTarget(data, kpi.id, scope.marketId, period)
+      : totalTarget(data, kpi, period)
+  const a = attainment(value, target, kpi.direction)
+  const prev = periodFact(data, kpi, prevPeriod(period), scope)
+  const delta = value != null && prev != null ? value - prev : null
+  const spark = monthlySeries(data, kpi, scope)
+    .filter((p) => p.date <= period)
+    .slice(-6)
+  return {
+    kpi,
+    value,
+    target,
+    attainment: a,
+    status: statusFromAttainment(a),
+    delta,
+    deltaGood: delta == null ? true : deltaIsGood(delta, kpi.direction),
+    spark,
+  }
+}
+
+export function snapshotsForPeriod(data: DashboardData, period: string, scope: PeriodScope = {}): KpiSnapshot[] {
+  return activeKpis(data).map((k) => snapshotForPeriod(data, k, period, scope))
+}
+
+export function byMarketPeriod(data: DashboardData, kpi: Kpi, period: string): BreakdownRow<Market>[] {
+  return [...data.markets]
+    .sort((a, z) => a.sort_order - z.sort_order)
+    .map((market) => {
+      const value = periodFact(data, kpi, period, { marketId: market.id })
+      const target = periodTarget(data, kpi.id, market.id, period)
+      const a = attainment(value, target, kpi.direction)
+      return { entity: market, value, target, attainment: a, status: statusFromAttainment(a) }
+    })
+}
+
+export function byMemberPeriod(data: DashboardData, kpi: Kpi, period: string): BreakdownRow<Member>[] {
+  return activeMembers(data).map((member) => {
+    const value = periodFact(data, kpi, period, { memberId: member.id })
+    const target = memberTargetForPeriod(data, kpi, member, period)
+    const a = attainment(value, target, kpi.direction)
+    return { entity: member, value, target, attainment: a, status: statusFromAttainment(a) }
+  })
+}
+
+export function memberAdherencePeriod(data: DashboardData, member: Member, period: string): number | null {
+  const snaps = activeKpis(data).map((kpi) => {
+    const value = periodFact(data, kpi, period, { memberId: member.id })
+    const target = memberTargetForPeriod(data, kpi, member, period)
+    return { status: statusFromAttainment(attainment(value, target, kpi.direction)) }
+  })
+  return adherence(snaps)
+}
+
+export function overallAdherencePeriod(data: DashboardData, period: string): number | null {
+  return adherence(snapshotsForPeriod(data, period))
+}
+
+/** Member × market grid of attainment for one month (mean across KPIs, or one KPI). */
+export function heatmapPeriod(data: DashboardData, period: string, kpi?: Kpi): HeatCell[] {
+  const kpis = kpi ? [kpi] : activeKpis(data)
+  const cells: HeatCell[] = []
+  for (const member of activeMembers(data)) {
+    for (const market of data.markets) {
+      const covered = member.marketIds.includes(market.id)
+      if (!covered) {
+        cells.push({ memberId: member.id, marketId: market.id, covered: false, attainment: null, status: 'none' })
+        continue
+      }
+      const vals: number[] = []
+      for (const k of kpis) {
+        const value = periodFact(data, k, period, { memberId: member.id, marketId: market.id })
+        const a = attainment(value, cellTarget(data, k, market.id, period), k.direction)
+        if (a != null) vals.push(Math.min(a, 1.25))
+      }
+      const mean = vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : null
+      cells.push({ memberId: member.id, marketId: market.id, covered: true, attainment: mean, status: statusFromAttainment(mean) })
+    }
+  }
+  return cells
+}
+
+export interface MatrixCell {
+  fact: number | null
+  target: number | null
+  attainment: number | null
+  status: Status
+}
+
+export interface MatrixRow {
+  /** null marks the TOTAL row. */
+  market: Market | null
+  id: string
+  code: string
+  name: string
+  cells: Record<string, MatrixCell>
+  adherence: number | null
+}
+
+/** The country × KPI matrix (LT/LV/EE/PL rows + TOTAL), the dashboard centerpiece. */
+export function countryMatrix(data: DashboardData, period: string): MatrixRow[] {
+  const kpis = activeKpis(data)
+  const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
+
+  const build = (market: Market | null): MatrixRow => {
+    const cells: Record<string, MatrixCell> = {}
+    const statuses: { status: Status }[] = []
+    for (const kpi of kpis) {
+      const scope: PeriodScope = market ? { marketId: market.id } : {}
+      const fact = periodFact(data, kpi, period, scope)
+      const target = market ? periodTarget(data, kpi.id, market.id, period) : totalTarget(data, kpi, period)
+      const a = attainment(fact, target, kpi.direction)
+      const status = statusFromAttainment(a)
+      cells[kpi.id] = { fact, target, attainment: a, status }
+      statuses.push({ status })
+    }
+    return {
+      market,
+      id: market?.id ?? 'total',
+      code: market?.code ?? 'ALL',
+      name: market?.name ?? 'Total',
+      cells,
+      adherence: adherence(statuses),
+    }
+  }
+
+  return [...markets.map(build), build(null)]
 }

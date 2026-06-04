@@ -3,63 +3,63 @@
 @tailwind utilities;
 
 /* ============================================================
-   Design tokens — "Refined operational clarity"
-   Warm paper, cobalt-ink accent, semantic status colors.
+   Design tokens — "Claude desktop" warm editorial calm
+   Warm cream canvas, near-white cards, single clay accent.
    HSL channels only (consumed via hsl(var(--x) / <alpha>)).
    ============================================================ */
 @layer base {
   :root {
-    --paper: 38 33% 97%;
-    --surface: 40 42% 99%;
-    --surface-2: 38 26% 95%;
+    --paper: 48 33% 97%;        /* #FAF9F5 warm cream */
+    --surface: 0 0% 100%;       /* #FFFFFF */
+    --surface-2: 48 25% 92%;    /* #F0EEE6 warm sand */
 
-    --ink: 222 18% 15%;
-    --ink-soft: 222 11% 34%;
-    --ink-muted: 222 8% 50%;
+    --ink: 30 3% 12%;           /* #1F1E1D warm near-black */
+    --ink-soft: 45 3% 23%;      /* #3D3C39 */
+    --ink-muted: 48 3% 44%;     /* #73726C warm gray */
 
-    --line: 34 18% 90%;
-    --line-strong: 34 14% 82%;
+    --line: 45 21% 89%;         /* #E8E5DC quiet warm border */
+    --line-strong: 45 17% 82%;  /* #D8D4C8 */
 
-    --brand: 226 57% 34%;
-    --brand-soft: 226 64% 95%;
-    --brand-ink: 226 58% 30%;
-    --brand-contrast: 40 42% 98%;
+    --brand: 16 53% 50%;        /* #C15F3C clay / terracotta */
+    --brand-soft: 20 49% 92%;   /* #F4E6DF accent wash */
+    --brand-ink: 16 58% 42%;    /* readable clay text */
+    --brand-contrast: 0 0% 100%;
 
-    --good: 152 52% 37%;
-    --good-soft: 152 44% 92%;
-    --warn: 36 90% 45%;
-    --warn-soft: 40 88% 91%;
-    --bad: 352 64% 49%;
-    --bad-soft: 352 68% 95%;
+    --good: 108 28% 43%;        /* #5B8C4F muted green */
+    --good-soft: 108 24% 92%;
+    --warn: 39 73% 41%;         /* #C2840E amber */
+    --warn-soft: 39 70% 90%;
+    --bad: 4 53% 50%;           /* #C2453B true red */
+    --bad-soft: 4 53% 92%;
 
-    --shadow: 222 45% 22%;
+    --shadow: 30 20% 22%;
 
     color-scheme: light;
   }
 
   .dark {
-    --paper: 222 24% 9%;
-    --surface: 222 20% 12%;
-    --surface-2: 222 17% 16%;
+    --paper: 60 3% 15%;         /* #262624 warm charcoal */
+    --surface: 60 2% 18%;       /* #30302E */
+    --surface-2: 60 3% 22%;     /* #3A3A37 */
 
-    --ink: 40 30% 94%;
-    --ink-soft: 220 12% 72%;
-    --ink-muted: 220 9% 55%;
+    --ink: 48 26% 95%;          /* #F5F4EE cream */
+    --ink-soft: 48 11% 82%;     /* #D6D4CC */
+    --ink-muted: 48 5% 59%;     /* #9C9A92 */
 
-    --line: 220 14% 20%;
-    --line-strong: 220 12% 29%;
+    --line: 48 4% 25%;          /* #43423E */
+    --line-strong: 45 5% 32%;   /* #55534D */
 
-    --brand: 226 72% 66%;
-    --brand-soft: 226 38% 21%;
-    --brand-ink: 226 74% 74%;
-    --brand-contrast: 224 32% 10%;
+    --brand: 15 60% 60%;        /* #D97757 clay (lifted for dark) */
+    --brand-soft: 18 17% 19%;   /* #3A2E29 */
+    --brand-ink: 16 64% 66%;
+    --brand-contrast: 30 3% 12%;
 
-    --good: 152 48% 51%;
-    --good-soft: 152 28% 18%;
-    --warn: 38 88% 57%;
-    --warn-soft: 38 38% 19%;
-    --bad: 352 70% 63%;
-    --bad-soft: 352 38% 21%;
+    --good: 108 30% 55%;
+    --good-soft: 108 22% 18%;
+    --warn: 39 80% 58%;
+    --warn-soft: 39 40% 20%;
+    --bad: 4 65% 62%;
+    --bad-soft: 4 40% 22%;
 
     --shadow: 0 0% 0%;
 
@@ -94,8 +94,8 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    opacity: 0.5;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   }
 
   ::selection {
@@ -128,7 +128,7 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-line bg-surface shadow-card;
+    @apply rounded-xl border border-line bg-surface shadow-card;
   }
 
   .chip {

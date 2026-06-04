@@ -4,6 +4,8 @@ import {
   deleteMember,
   saveKpi,
   saveMember,
+  upsertTargets,
+  type TargetUpsert,
 } from '@/data/datasource'
 import type { Kpi, Member } from '@/lib/types'
 import { dashboardKey } from './useDashboard'
@@ -21,5 +23,6 @@ export function useConfigMutations() {
       onSuccess: invalidate,
     }),
     deleteMember: useMutation({ mutationFn: (id: string) => deleteMember(id), onSuccess: invalidate }),
+    upsertTargets: useMutation({ mutationFn: (rows: TargetUpsert[]) => upsertTargets(rows), onSuccess: invalidate }),
   }
 }

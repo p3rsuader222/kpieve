@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Toggle } from '@/components/ui/Toggle'
 import { KpiEditor } from '@/components/settings/KpiEditor'
 import { MemberEditor } from '@/components/settings/MemberEditor'
+import { TargetEditor } from '@/components/settings/TargetEditor'
+import type { TargetUpsert } from '@/data/datasource'
 
 const FORMAT_LABEL: Record<Kpi['format'], string> = {
   number: 'Number',
@@ -110,6 +112,21 @@ export function Settings() {
       toast.error(err instanceof Error ? err.message : 'Could not save member.')
     }
   }
+  // ----- Target handlers -----
+  async function saveTargets(rows: TargetUpsert[]) {
+    if (!guard()) return
+    if (rows.length === 0) {
+      toast.info('Nothing to save yet.')
+      return
+    }
+    try {
+      await m.upsertTargets.mutateAsync(rows)
+      toast.success(`Saved ${rows.length} target${rows.length === 1 ? '' : 's'}.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save targets.')
+    }
+  }
+
   async function removeMember(mem: Member) {
     if (!guard()) return
     if (!window.confirm(`Remove ${mem.name}? Their entries will be deleted.`)) return
@@ -182,6 +199,11 @@ export function Settings() {
             </li>
           ))}
         </ul>
+      </Panel>
+
+      {/* Targets */}
+      <Panel eyebrow="Per country · per month" title="Targets">
+        <TargetEditor data={data} saving={m.upsertTargets.isPending} onSave={saveTargets} />
       </Panel>
 
       {/* Members */}

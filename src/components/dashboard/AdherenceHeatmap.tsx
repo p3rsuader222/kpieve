@@ -1,20 +1,20 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
-import { activeMembers, heatmap } from '@/lib/metrics'
+import { activeMembers, heatmapPeriod } from '@/lib/metrics'
 import { STATUS_SOFT_BG, STATUS_TEXT } from '@/lib/status'
-import type { DashboardData, Kpi, TimeRange } from '@/lib/types'
+import type { DashboardData, Kpi } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 
 interface Props {
   data: DashboardData
-  range: TimeRange
+  period: string
   kpi?: Kpi
 }
 
-export function AdherenceHeatmap({ data, range, kpi }: Props) {
+export function AdherenceHeatmap({ data, period, kpi }: Props) {
   const members = activeMembers(data)
   const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
-  const cells = useMemo(() => heatmap(data, range, kpi), [data, range, kpi])
+  const cells = useMemo(() => heatmapPeriod(data, period, kpi), [data, period, kpi])
   const cellMap = useMemo(() => {
     const m = new Map<string, (typeof cells)[number]>()
     for (const c of cells) m.set(`${c.memberId}:${c.marketId}`, c)

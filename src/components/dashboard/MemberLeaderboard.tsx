@@ -3,37 +3,32 @@ import { formatPercent } from '@/lib/format'
 import {
   activeKpis,
   activeMembers,
-  aggregate,
-  filterEntries,
-  latestDate,
-  memberAdherence,
-  rangeBounds,
+  memberAdherencePeriod,
+  memberTargetForPeriod,
+  periodFact,
 } from '@/lib/metrics'
 import { attainment, statusFromAttainment, STATUS_VAR, type Status } from '@/lib/status'
-import type { DashboardData, TimeRange } from '@/lib/types'
+import type { DashboardData } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 
-export function MemberLeaderboard({ data, range }: { data: DashboardData; range: TimeRange }) {
+export function MemberLeaderboard({ data, period }: { data: DashboardData; period: string }) {
   const rows = useMemo(() => {
-    const b = rangeBounds(range, latestDate(data.entries))
     const kpis = activeKpis(data)
     return activeMembers(data)
       .map((member) => {
         const statuses: { id: string; name: string; status: Status }[] = kpis.map((kpi) => {
-          const agg = aggregate(
-            filterEntries(data.entries, { kpiId: kpi.id, memberId: member.id, start: b.start, end: b.end }),
-            kpi.aggregation,
-          )
-          return { id: kpi.id, name: kpi.name, status: statusFromAttainment(attainment(agg.value, agg.target, kpi.direction)) }
+          const value = periodFact(data, kpi, period, { memberId: member.id })
+          const target = memberTargetForPeriod(data, kpi, member, period)
+          return { id: kpi.id, name: kpi.name, status: statusFromAttainment(attainment(value, target, kpi.direction)) }
         })
         const markets = member.marketIds
           .map((id) => data.markets.find((m) => m.id === id)?.code)
           .filter(Boolean)
           .join(' · ')
-        return { member, markets, adherence: memberAdherence(data, member, range), statuses }
+        return { member, markets, adherence: memberAdherencePeriod(data, member, period), statuses }
       })
       .sort((a, z) => (z.adherence ?? -1) - (a.adherence ?? -1))
-  }, [data, range])
+  }, [data, period])
 
   return (
     <ol className="space-y-1">

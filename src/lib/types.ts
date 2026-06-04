@@ -50,12 +50,24 @@ export interface Entry {
   source: EntrySource
 }
 
+/**
+ * Per-country, per-month configurable target.
+ * `period` is a month start (yyyy-MM-01). One row per (kpi, market, month).
+ */
+export interface Target {
+  kpi_id: string
+  market_id: string
+  period: string // month start, yyyy-MM-01
+  value: number
+}
+
 /** Convenience bundle of everything the dashboard needs in one shot. */
 export interface DashboardData {
   markets: Market[]
   members: Member[]
   kpis: Kpi[]
   entries: Entry[]
+  targets: Target[]
 }
 
 export type TimeRange = 'today' | 'week' | 'month'

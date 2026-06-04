@@ -50,7 +50,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
             >
               <DeltaIcon size={13} strokeWidth={2.5} />
               <span className="tnum">{formatDelta(delta, kpi)}</span>
-              <span className="font-medium opacity-70">vs prev</span>
+              <span className="font-medium opacity-70">vs last mo</span>
             </span>
           )}
         </div>

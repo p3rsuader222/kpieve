@@ -55,12 +55,25 @@ create table if not exists public.entries (
   source     text not null default 'manual' check (source in ('manual','sheet')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  -- One value per KPI / member / market / day → enables clean upserts.
+  -- v2: a "month" is represented by its first day (yyyy-MM-01). This unique key
+  -- then enforces one value per KPI / member / market / month → clean upserts.
   constraint entries_uniq unique (kpi_id, member_id, market_id, date)
 );
 
 create index if not exists entries_date_idx on public.entries(date);
 create index if not exists entries_kpi_idx  on public.entries(kpi_id);
+
+-- Per-country, per-month targets (configurable; can change month to month).
+create table if not exists public.targets (
+  id         uuid primary key default gen_random_uuid(),
+  kpi_id     uuid not null references public.kpis(id)    on delete cascade,
+  market_id  uuid not null references public.markets(id) on delete cascade,
+  period     date not null,                 -- month start, yyyy-MM-01
+  value      numeric not null,
+  constraint targets_uniq unique (kpi_id, market_id, period)
+);
+
+create index if not exists targets_period_idx on public.targets(period);
 
 -- Keep updated_at fresh on edits.
 create or replace function public.touch_updated_at()
@@ -83,11 +96,12 @@ alter table public.members        enable row level security;
 alter table public.member_markets enable row level security;
 alter table public.kpis           enable row level security;
 alter table public.entries        enable row level security;
+alter table public.targets        enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['markets','members','member_markets','kpis','entries'] loop
+  foreach t in array array['markets','members','member_markets','kpis','entries','targets'] loop
     execute format('drop policy if exists "authenticated full access" on public.%I;', t);
     execute format(
       'create policy "authenticated full access" on public.%I for all to authenticated using (true) with check (true);',
@@ -106,10 +120,10 @@ insert into public.markets (code, name, sort_order) values
 on conflict (code) do nothing;
 
 insert into public.members (name, initials, color, sort_order) values
-  ('Greta Kazlauskaitė', 'GK', '#3457b8', 1),
-  ('Karl Tamm',          'KT', '#0e9488', 2),
-  ('Marta Kowalska',     'MK', '#b8567a', 3),
-  ('Rūta Bērziņa',       'RB', '#c2730e', 4)
+  ('Greta Kazlauskaitė', 'GK', '#C15F3C', 1),
+  ('Karl Tamm',          'KT', '#5B8C4F', 2),
+  ('Marta Kowalska',     'MK', '#C2840E', 3),
+  ('Rūta Bērziņa',       'RB', '#7A6BC0', 4)
 on conflict do nothing;
 
 -- Coverage (members cover multiple markets).
@@ -125,14 +139,31 @@ join public.members mem on mem.name = pair.member_name
 join public.markets mk  on mk.code  = pair.market_code
 on conflict do nothing;
 
+-- Real KPIs from Evelina's workbook.
 insert into public.kpis (name, description, unit, format, direction, aggregation, default_target, sort_order) values
-  ('Clients onboarded',   'New clients fully onboarded.',                 'clients', 'number',   'higher_better', 'sum', 3,    1),
-  ('Avg time-to-onboard', 'Mean elapsed time from signup to activation.', null,      'duration', 'lower_better',  'avg', 2880, 2),
-  ('Completion rate',     'Share of started onboardings completed.',      null,      'percent',  'higher_better', 'avg', 95,   3),
-  ('CSAT',                'Post-onboarding satisfaction score.',          '/ 5',     'number',   'higher_better', 'avg', 4.5,  4),
-  ('SLA adherence',       'First-response within agreed SLA.',            null,      'percent',  'higher_better', 'avg', 98,   5)
+  ('Sellers with 1st active offer',     'New sellers who published their first active offer.',           'sellers', 'number',  'higher_better', 'sum', 12, 1),
+  ('Sellers with 1st order in 30 days', 'Sellers reaching their first order within 30 days of an active offer.', 'sellers', 'number', 'higher_better', 'sum', 7,  2),
+  ('PHH ads',                           'Premium home & hardware ads published.',                        'ads',     'number',  'higher_better', 'sum', 12, 3),
+  ('Late rate per portfolio CCD',       'Share of portfolio CCDs delivered late (lower is better).',     null,      'percent', 'lower_better',  'avg', 5,  4),
+  ('FBP',                               'Fulfilled business plan sellers.',                              null,      'number',  'higher_better', 'sum', 5,  5)
 on conflict do nothing;
 
--- Entries start empty — the team lead fills them via the Update page.
+-- ---------- Seed: current-month targets (per country) ----------
+-- Targets are configurable per (KPI, country, month) on the Settings page;
+-- these seed the current month from the workbook. Re-running is idempotent.
+insert into public.targets (kpi_id, market_id, period, value)
+select k.id, mk.id, date_trunc('month', current_date)::date, t.value
+from (values
+  ('Sellers with 1st active offer',     'LT', 16), ('Sellers with 1st active offer',     'LV', 12), ('Sellers with 1st active offer',     'EE', 12), ('Sellers with 1st active offer',     'PL', 12),
+  ('Sellers with 1st order in 30 days', 'LT', 10), ('Sellers with 1st order in 30 days', 'LV',  7), ('Sellers with 1st order in 30 days', 'EE',  7), ('Sellers with 1st order in 30 days', 'PL',  7),
+  ('PHH ads',                           'LT', 16), ('PHH ads',                           'LV', 12), ('PHH ads',                           'EE', 12), ('PHH ads',                           'PL', 12),
+  ('Late rate per portfolio CCD',       'LT',  5), ('Late rate per portfolio CCD',       'LV',  5), ('Late rate per portfolio CCD',       'EE',  5), ('Late rate per portfolio CCD',       'PL',  5),
+  ('FBP',                               'LT',  5), ('FBP',                               'LV',  5), ('FBP',                               'EE',  5), ('FBP',                               'PL',  5)
+) as t(kpi_name, market_code, value)
+join public.kpis k    on k.name  = t.kpi_name
+join public.markets mk on mk.code = t.market_code
+on conflict (kpi_id, market_id, period) do nothing;
+
+-- Entries start empty — the team lead fills them per month via the Update page.
 -- (To preview with live-looking data before entering any, leave Supabase
---  unconfigured locally and the app serves its built-in mock dataset.)
+--  unconfigured locally and the app serves its built-in monthly mock dataset.)

@@ -27,7 +27,7 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--line))" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--surface-2))" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}

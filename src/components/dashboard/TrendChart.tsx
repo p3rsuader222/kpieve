@@ -14,22 +14,20 @@ import {
 import { formatCompact, formatValue } from '@/lib/format'
 import {
   activeMembers,
-  filterEntries,
-  latestDate,
-  rangeBounds,
-  seriesByDay,
+  listPeriods,
+  periodFact,
+  totalTarget,
 } from '@/lib/metrics'
-import type { DashboardData, Kpi, TimeRange } from '@/lib/types'
+import type { DashboardData, Kpi } from '@/lib/types'
 import { useThemeColors } from '@/hooks/useThemeColors'
 
 export type SplitBy = 'none' | 'market' | 'member'
 
-const MARKET_COLORS = ['#3457b8', '#0e9488', '#b8567a', '#c2730e']
+const MARKET_COLORS = ['#C15F3C', '#5B8C4F', '#C2840E', '#7A6BC0']
 
 interface Props {
   data: DashboardData
   kpi: Kpi
-  range: TimeRange
   splitBy: SplitBy
 }
 
@@ -39,56 +37,44 @@ interface SeriesDef {
   color: string
 }
 
-export function TrendChart({ data, kpi, range, splitBy }: Props) {
+export function TrendChart({ data, kpi, splitBy }: Props) {
   const c = useThemeColors()
-  const b = rangeBounds(range, latestDate(data.entries))
 
   const { rows, series, target } = useMemo(() => {
-    const scopedAll = filterEntries(data.entries, { kpiId: kpi.id, start: b.start, end: b.end })
-    const dates = [...new Set(scopedAll.map((e) => e.date))].sort()
+    const periods = listPeriods(data)
     const rowMap = new Map<string, Record<string, number | string | null>>()
-    dates.forEach((d) => rowMap.set(d, { date: d }))
+    periods.forEach((p) => rowMap.set(p, { date: p }))
 
     let series: SeriesDef[] = []
 
     if (splitBy === 'none') {
-      const pts = seriesByDay(scopedAll, kpi.aggregation)
-      pts.forEach((p) => (rowMap.get(p.date)!.value = p.value))
+      periods.forEach((p) => (rowMap.get(p)!.value = periodFact(data, kpi, p)))
       series = [{ key: 'value', label: kpi.name, color: c.brand }]
     } else if (splitBy === 'market') {
       data.markets
         .slice()
         .sort((a, z) => a.sort_order - z.sort_order)
         .forEach((m, i) => {
-          const pts = seriesByDay(
-            filterEntries(scopedAll, { marketId: m.id }),
-            kpi.aggregation,
-          )
-          pts.forEach((p) => (rowMap.get(p.date)![`m_${m.id}`] = p.value))
+          periods.forEach((p) => (rowMap.get(p)![`m_${m.id}`] = periodFact(data, kpi, p, { marketId: m.id })))
           series.push({ key: `m_${m.id}`, label: m.code, color: MARKET_COLORS[i % MARKET_COLORS.length] })
         })
     } else {
       activeMembers(data).forEach((m) => {
-        const pts = seriesByDay(filterEntries(scopedAll, { memberId: m.id }), kpi.aggregation)
-        pts.forEach((p) => (rowMap.get(p.date)![`u_${m.id}`] = p.value))
+        periods.forEach((p) => (rowMap.get(p)![`u_${m.id}`] = periodFact(data, kpi, p, { memberId: m.id })))
         series.push({ key: `u_${m.id}`, label: m.initials, color: m.color })
       })
     }
 
-    // Representative target (constant over time in source data).
-    let target: number | null = null
-    if (splitBy === 'none') {
-      const withT = seriesByDay(scopedAll, kpi.aggregation).filter((p) => p.target != null)
-      target = withT.length ? withT[withT.length - 1].target! : null
-    }
+    // Representative TOTAL target (latest month) for the reference line.
+    const target = splitBy === 'none' && periods.length ? totalTarget(data, kpi, periods[periods.length - 1]) : null
 
-    return { rows: dates.map((d) => rowMap.get(d)!), series, target }
-  }, [data, kpi, b.start, b.end, splitBy, c.brand])
+    return { rows: periods.map((p) => rowMap.get(p)!), series, target }
+  }, [data, kpi, splitBy, c.brand])
 
   if (rows.length < 2) {
     return (
       <div className="grid h-[280px] place-items-center text-sm text-ink-muted">
-        Not enough data in this range yet.
+        Not enough monthly history yet.
       </div>
     )
   }
@@ -107,11 +93,11 @@ export function TrendChart({ data, kpi, range, splitBy }: Props) {
         <CartesianGrid stroke={c.line} strokeDasharray="3 4" vertical={false} />
         <XAxis
           dataKey="date"
-          tickFormatter={(d) => format(parseISO(d), 'MMM d')}
+          tickFormatter={(d) => format(parseISO(d), 'MMM')}
           tick={{ fill: c['ink-muted'], fontSize: 11 }}
           axisLine={{ stroke: c.line }}
           tickLine={false}
-          minTickGap={28}
+          minTickGap={12}
           dy={8}
         />
         <YAxis
@@ -188,7 +174,7 @@ function TrendTooltip({ active, label, payload, kpi, surface, line, ink, muted }
       style={{ background: surface, borderColor: line, color: ink }}
     >
       <div className="mb-1.5 font-semibold" style={{ color: muted }}>
-        {format(parseISO(label), 'EEE, MMM d')}
+        {format(parseISO(label), 'MMMM yyyy')}
       </div>
       <div className="space-y-1">
         {payload.map((p) => (

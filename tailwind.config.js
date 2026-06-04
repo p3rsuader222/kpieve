@@ -28,7 +28,7 @@ export default {
         'bad-soft': 'hsl(var(--bad-soft) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'serif'],
+        display: ['Newsreader', 'Georgia', 'serif'],
         sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
@@ -40,9 +40,9 @@ export default {
         '3xl': '1.5rem',
       },
       boxShadow: {
-        card: '0 1px 2px hsl(var(--shadow) / 0.04), 0 4px 16px -8px hsl(var(--shadow) / 0.12)',
-        'card-hover': '0 2px 4px hsl(var(--shadow) / 0.06), 0 12px 28px -12px hsl(var(--shadow) / 0.20)',
-        pop: '0 8px 40px -12px hsl(var(--shadow) / 0.28)',
+        card: '0 1px 2px hsl(var(--shadow) / 0.03), 0 1px 3px hsl(var(--shadow) / 0.04)',
+        'card-hover': '0 1px 2px hsl(var(--shadow) / 0.05), 0 6px 20px -10px hsl(var(--shadow) / 0.14)',
+        pop: '0 8px 36px -12px hsl(var(--shadow) / 0.22)',
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.22, 1, 0.36, 1)',

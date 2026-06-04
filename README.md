@@ -1,9 +1,10 @@
 # KPIeve
 
 A focused, visually polished dashboard for an **Onboarding Team Lead** to track how the
-team is hitting KPIs across the **LT · LV · EE · PL** markets. The lead updates numbers
-each morning in‑app; the dashboard shows targets, trends, per‑member / per‑market
-breakdowns, and a coverage heatmap.
+team is hitting KPIs across the **LT · LV · EE · PL** markets. It's **country‑first** and
+**monthly**: the centerpiece is a Country × KPI matrix of **fact vs per‑country target**
+(plus a TOTAL row), with per‑member breakdowns, month‑over‑month trends, and a coverage
+heatmap. The lead enters each month's numbers in‑app and tunes targets per country/month.
 
 - **Stack:** Vite · React · TypeScript · Tailwind CSS · TanStack Query · Recharts · Framer Motion
 - **Data:** Supabase (Postgres + Auth), with a deterministic **mock mode** for zero‑setup previews
@@ -29,7 +30,13 @@ disabled until Supabase is connected.
 ### 1. Create the database
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and run it.
-   This creates the tables, Row Level Security policies, and seeds markets, the team, and the starter KPIs.
+   This creates the tables (incl. the `targets` table), Row Level Security policies, and seeds
+   markets, the team, the 5 real KPIs, and the current month's per‑country targets.
+
+> **Upgrading an existing v1 database?** Don't re‑run `schema.sql`. Instead run
+> [`supabase/migrate-v2.sql`](supabase/migrate-v2.sql) once — it adds the `targets` table,
+> swaps the placeholder KPIs for the real ones, and seeds the current month's targets
+> (idempotent, safe to re‑run).
 
 ### 2. Create the shared login (the "password gate")
 1. **Authentication → Users → Add user** → set an email + password. This single account is
@@ -67,25 +74,34 @@ Restart `npm run dev`. You'll now get the login screen and live data.
 
 ## Daily use
 
-- **Dashboard** (`/`) — overall adherence, KPI cards (value vs target, trend, Δ vs previous
-  period), trend chart (Team / Market / Member split), team leaderboard, per‑KPI breakdown,
-  and the member × market heatmap. Toggle the time range (Today / Week / Month) and light/dark.
-- **Update** (`/update`) — pick the date, type each member's number per market for each KPI,
-  then **Save all**. Re‑opening a date shows what's already saved so you can correct it.
-- **Settings** (`/settings`) — add / rename KPIs and set targets, manage team members and the
-  markets they cover. No code required.
+- **Dashboard** (`/`) — pick the month (◂ ▸). The **Country × KPI matrix** shows each
+  country's Fact / Target and attainment, with a TOTAL row; click a country to focus its
+  5 KPI cards. Below: month‑over‑month trend (Total / Market / Member split), team
+  leaderboard, per‑KPI breakdown, and the member × market heatmap. Light/dark toggle in
+  the sidebar.
+- **Update** (`/update`) — pick the **month**, type each member's number per country for
+  each KPI (column headers show the per‑country target), then **Save all**. Re‑opening a
+  month shows what's already saved so you can correct it.
+- **Settings** (`/settings`) — edit the **per‑country / per‑month Targets** grid, add /
+  rename KPIs, and manage team members and the markets they cover. No code required.
 
 ---
 
 ## How metrics roll up
 
+A **month** is stored as its first day (`yyyy-MM-01`). The authoritative per‑country/month
+target lives in the **`targets`** table (falling back to a KPI's `default_target`); a
+country's Fact is the aggregate of its members' entries for that month.
+
 Each KPI has an **aggregation**:
-- **Sum** (e.g. *Clients onboarded*) — values and targets add up across members/markets/days.
-- **Average** (e.g. *Completion rate*, *CSAT*, *SLA*, *time‑to‑onboard*) — the mean over the period.
+- **Sum** (e.g. *Sellers with 1st active offer*, *PHH ads*, *FBP*) — facts and targets add
+  up across members/markets; the TOTAL row sums the countries.
+- **Average** (e.g. *Late rate per portfolio CCD*) — the mean; the TOTAL row averages the
+  countries.
 
 A KPI's **direction** (`higher_better` / `lower_better`) decides whether being above or below
-target is good. Status thresholds live in [`src/lib/status.ts`](src/lib/status.ts)
-(on‑track ≥ 97% of target, at‑risk ≥ 85%, else off‑track).
+target is good — a *lower* late rate scores higher. Status thresholds live in
+[`src/lib/status.ts`](src/lib/status.ts) (on‑track ≥ 97% of target, at‑risk ≥ 85%, else off‑track).
 
 ---
 
@@ -107,8 +123,8 @@ src/
   context/     AuthContext (password gate)
   hooks/       useDashboard, useTheme, useThemeColors, mutation hooks
   components/  ui/ (primitives) · layout/ · dashboard/ · settings/
-  pages/       Dashboard, Update, Settings, Login
-supabase/      schema.sql (tables, RLS, seed)
+  pages/       Dashboard (country-first), Update (monthly), Settings, Login
+supabase/      schema.sql (fresh install) · migrate-v2.sql (run once on an existing v1 DB)
 ```
 
 ## Scripts

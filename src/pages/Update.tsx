@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { Database, Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { activeKpis, activeMembers } from '@/lib/metrics'
-import { formatValue } from '@/lib/format'
+import { activeKpis, activeMembers, cellTarget, monthStart, periodTarget } from '@/lib/metrics'
+import { formatCompact } from '@/lib/format'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { usingMockData, type EntryUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -16,12 +16,20 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
 
+/** Round an even-split target sensibly for storage on a member entry. */
+function splitTargetValue(data: DashboardData, kpi: Kpi, marketId: string, period: string): number | null {
+  const t = cellTarget(data, kpi, marketId, period)
+  if (t == null) return null
+  return Math.round(t * 100) / 100
+}
+
 export function Update() {
   const { data, isLoading } = useDashboard()
   const upsert = useUpsertEntries()
   const toast = useToast()
 
-  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'))
+  const period = `${month}-01`
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
 
@@ -29,19 +37,19 @@ export function Update() {
   const members = data ? activeMembers(data) : []
   const activeKpi = kpis.find((k) => k.id === activeKpiId) ?? kpis[0]
 
-  // Prefill from entries already saved for the chosen date.
+  // Prefill from entries already saved for the chosen month.
   useEffect(() => {
     if (!data) return
     const next: Record<string, string> = {}
     for (const e of data.entries) {
-      if (e.date === date && e.member_id && e.market_id) {
+      if (monthStart(e.date) === period && e.member_id && e.market_id) {
         next[keyOf(e.kpi_id, e.member_id, e.market_id)] = String(e.value)
       }
     }
     setValues(next)
-  }, [data, date])
+  }, [data, period])
 
-  const dirtyRows = useMemo(() => collectRows(values, data, date), [values, data, date])
+  const dirtyRows = useMemo(() => collectRows(values, data, period), [values, data, period])
 
   if (isLoading || !data || !activeKpi) return <UpdateSkeleton />
 
@@ -63,30 +71,31 @@ export function Update() {
     }
     try {
       await upsert.mutateAsync(dirtyRows)
-      toast.success(`Saved ${dirtyRows.length} value${dirtyRows.length === 1 ? '' : 's'} for ${date}.`)
+      const label = format(parseISO(period), 'MMMM yyyy')
+      toast.success(`Saved ${dirtyRows.length} value${dirtyRows.length === 1 ? '' : 's'} for ${label}.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed.')
     }
   }
 
-  const cols = `minmax(132px, 1.6fr) repeat(${markets.length}, minmax(76px, 1fr))`
+  const cols = `minmax(132px, 1.6fr) repeat(${markets.length}, minmax(84px, 1fr))`
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Daily entry</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink">Update KPIs</h1>
-          <p className="mt-1.5 text-sm text-ink-muted">Enter each member's numbers per market, then save.</p>
+          <p className="eyebrow">Monthly entry</p>
+          <h1 className="mt-1.5 font-display text-3xl font-medium tracking-tight text-ink">Update KPIs</h1>
+          <p className="mt-2 text-sm text-ink-muted">Enter each member's monthly number per country, then save.</p>
         </div>
         <div className="flex items-end gap-2.5">
           <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Date</span>
+            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Month</span>
             <input
-              type="date"
-              value={date}
-              max={format(new Date(), 'yyyy-MM-dd')}
-              onChange={(e) => setDate(e.target.value)}
+              type="month"
+              value={month}
+              max={format(new Date(), 'yyyy-MM')}
+              onChange={(e) => setMonth(e.target.value)}
               className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </label>
@@ -107,15 +116,7 @@ export function Update() {
         </div>
       )}
 
-      <Panel
-        eyebrow={`${filledForKpi} of ${totalForKpi} entered`}
-        title={activeKpi.name}
-        actions={
-          activeKpi.default_target != null ? (
-            <span className="chip">Target {formatValue(activeKpi.default_target, activeKpi)}</span>
-          ) : null
-        }
-      >
+      <Panel eyebrow={`${filledForKpi} of ${totalForKpi} entered`} title={activeKpi.name}>
         <div className="mb-4 flex flex-wrap gap-1.5">
           {kpis.map((k) => (
             <button
@@ -134,14 +135,20 @@ export function Update() {
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[420px]">
-            <div className="grid items-center gap-2 pb-2" style={{ gridTemplateColumns: cols }}>
+          <div className="min-w-[460px]">
+            <div className="grid items-end gap-2 pb-2" style={{ gridTemplateColumns: cols }}>
               <span className="eyebrow">Member</span>
-              {markets.map((m) => (
-                <span key={m.id} className="text-center text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-                  {m.code}
-                </span>
-              ))}
+              {markets.map((m) => {
+                const t = periodTarget(data, activeKpi.id, m.id, period)
+                return (
+                  <div key={m.id} className="text-center">
+                    <span className="block text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
+                    <span className="tnum mt-0.5 block text-2xs text-ink-muted/80">
+                      tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
             <div className="space-y-2">
               {members.map((member) => (
@@ -160,6 +167,7 @@ export function Update() {
                         </div>
                       )
                     }
+                    const share = splitTargetValue(data, activeKpi, market.id, period)
                     return (
                       <input
                         key={market.id}
@@ -167,7 +175,7 @@ export function Update() {
                         inputMode="decimal"
                         step="any"
                         value={values[k] ?? ''}
-                        placeholder={activeKpi.default_target != null ? String(activeKpi.default_target) : ''}
+                        placeholder={share != null ? String(share) : ''}
                         onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
                         className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                       />
@@ -186,7 +194,7 @@ export function Update() {
 function collectRows(
   values: Record<string, string>,
   data: DashboardData | undefined,
-  date: string,
+  period: string,
 ): EntryUpsert[] {
   if (!data) return []
   const kpiById = new Map<string, Kpi>(data.kpis.map((k) => [k.id, k]))
@@ -196,13 +204,14 @@ function collectRows(
     const num = Number(raw)
     if (Number.isNaN(num)) continue
     const [kpi_id, member_id, market_id] = key.split(':')
+    const kpi = kpiById.get(kpi_id)
     rows.push({
       kpi_id,
       member_id,
       market_id,
-      date,
+      date: period, // month start yyyy-MM-01
       value: num,
-      target: kpiById.get(kpi_id)?.default_target ?? null,
+      target: kpi ? splitTargetValue(data, kpi, market_id, period) : null,
     })
   }
   return rows
@@ -215,7 +224,7 @@ function UpdateSkeleton() {
         <Skeleton className="h-9 w-56" />
         <Skeleton className="h-10 w-64" />
       </div>
-      <Skeleton className="h-80 w-full rounded-2xl" />
+      <Skeleton className="h-80 w-full rounded-xl" />
     </div>
   )
 }
