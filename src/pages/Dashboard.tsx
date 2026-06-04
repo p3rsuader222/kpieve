@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Info, RefreshCw } from 'lucide-react'
+import { Globe2, Info, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import { activeKpis, listPeriods, monthStart, snapshotsForPeriod, type Granularity } from '@/lib/metrics'
@@ -73,11 +73,22 @@ export function Dashboard() {
       {/* Sticky header */}
       <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="eyebrow">Onboarding team · LT · LV · EE · PL</p>
-            <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
-              Onboarding KPIs
-            </h1>
+          <div className="flex items-center gap-3">
+            <span
+              className={cn(
+                'grid h-12 w-12 shrink-0 place-items-center rounded-xl border transition-colors',
+                selectedCountry ? 'border-brand bg-brand-soft' : 'border-line bg-surface',
+              )}
+            >
+              {selectedCountry ? <Flag code={selectedCountry.code} size={30} /> : <Globe2 size={22} className="text-brand" />}
+            </span>
+            <div>
+              <p className="eyebrow">{selectedCountry ? 'Viewing country' : 'Onboarding team · LT · LV · EE · PL'}</p>
+              <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
+                Onboarding KPIs
+                {selectedCountry && <span className="text-brand"> · {selectedCountry.name}</span>}
+              </h1>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <MonthNav period={activePeriod} onChange={setPeriod} periods={periods} />
@@ -106,13 +117,22 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* LEFT column — matrix · detail · trend, joined */}
-        <div className="card divide-y divide-line xl:col-span-8">
-          <section className="p-4">
+        <div className="card relative divide-y divide-line overflow-hidden xl:col-span-8">
+          {selectedCountry && (
+            <div
+              key={selectedCountry.code}
+              className="pointer-events-none absolute -right-10 -top-10 z-0 animate-fade-up opacity-[0.06]"
+              aria-hidden="true"
+            >
+              <Flag code={selectedCountry.code} size={380} />
+            </div>
+          )}
+          <section className="relative z-10 p-4">
             <SectionHead eyebrow="Country × KPI" title="Targets & progress by country" />
             <CountryMatrix data={data} period={activePeriod} selected={selectedMarket} onSelect={setSelectedMarket} />
           </section>
 
-          <section className="p-4">
+          <section className="relative z-10 p-4">
             <SectionHead
               eyebrow="Monthly detail · click to focus a KPI"
               title={
@@ -151,7 +171,7 @@ export function Dashboard() {
             </div>
           </section>
 
-          <section className="p-4">
+          <section className="relative z-10 p-4">
             <SectionHead
               eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
               title="Trend over time"
