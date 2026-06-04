@@ -92,6 +92,36 @@ export async function upsertEntries(rows: EntryUpsert[]): Promise<void> {
   if (error) throw error
 }
 
+export interface EntryKey {
+  kpi_id: string
+  member_id: string
+  market_id: string
+  date: string
+}
+
+/** Delete specific (kpi × member × market × day) entries — e.g. cells cleared during an edit. */
+export async function deleteEntries(keys: EntryKey[]): Promise<void> {
+  if (keys.length === 0) return
+  const client = requireClient()
+  for (const k of keys) {
+    const { error } = await client
+      .from('entries')
+      .delete()
+      .eq('kpi_id', k.kpi_id)
+      .eq('member_id', k.member_id)
+      .eq('market_id', k.market_id)
+      .eq('date', k.date)
+    if (error) throw error
+  }
+}
+
+/** Delete every entry logged on a given day. */
+export async function deleteEntriesForDate(date: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('entries').delete().eq('date', date)
+  if (error) throw error
+}
+
 export interface TargetUpsert {
   kpi_id: string
   market_id: string

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays, format, parseISO } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight, Database, Save } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Database, Save, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
   activeKpis,
@@ -12,9 +12,9 @@ import {
 } from '@/lib/metrics'
 import { formatCompact } from '@/lib/format'
 import type { DashboardData, Kpi } from '@/lib/types'
-import { usingMockData, type EntryUpsert } from '@/data/datasource'
+import { usingMockData, type EntryKey, type EntryUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
-import { useUpsertEntries } from '@/hooks/useEntryMutations'
+import { useDeleteEntries, useDeleteEntriesForDate, useUpsertEntries } from '@/hooks/useEntryMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -27,6 +27,8 @@ const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:$
 export function Update() {
   const { data, isLoading } = useDashboard()
   const upsert = useUpsertEntries()
+  const deleteCells = useDeleteEntries()
+  const deleteDay = useDeleteEntriesForDate()
   const toast = useToast()
 
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
@@ -64,19 +66,48 @@ export function Update() {
   const totalForKpi = members.reduce((n, m) => n + m.marketIds.length, 0)
 
   async function onSave() {
+    if (!data) return
     if (usingMockData) {
       toast.info('Demo mode — connect Supabase to save entries.')
       return
     }
-    if (dirtyRows.length === 0) {
+    // Cells that had a saved value for this day but were cleared → delete them.
+    const cleared: EntryKey[] = []
+    for (const e of data.entries) {
+      if (e.date === date && e.member_id && e.market_id) {
+        const v = values[keyOf(e.kpi_id, e.member_id, e.market_id)]
+        if (v == null || v.trim() === '') {
+          cleared.push({ kpi_id: e.kpi_id, member_id: e.member_id, market_id: e.market_id, date })
+        }
+      }
+    }
+    if (dirtyRows.length === 0 && cleared.length === 0) {
       toast.info('Nothing to save yet.')
       return
     }
     try {
-      await upsert.mutateAsync(dirtyRows)
-      toast.success(`Saved ${dirtyRows.length} value${dirtyRows.length === 1 ? '' : 's'} for ${format(parseISO(date), 'd MMM')}.`)
+      if (dirtyRows.length) await upsert.mutateAsync(dirtyRows)
+      if (cleared.length) await deleteCells.mutateAsync(cleared)
+      const parts: string[] = []
+      if (dirtyRows.length) parts.push(`saved ${dirtyRows.length}`)
+      if (cleared.length) parts.push(`removed ${cleared.length}`)
+      toast.success(`${parts.join(' · ')} for ${format(parseISO(date), 'd MMM')}.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed.')
+    }
+  }
+
+  async function onDeleteDay(day: string) {
+    if (usingMockData) {
+      toast.info('Demo mode — connect Supabase to edit entries.')
+      return
+    }
+    if (!window.confirm(`Delete all entries logged on ${format(parseISO(day), 'd MMM yyyy')}?`)) return
+    try {
+      await deleteDay.mutateAsync(day)
+      toast.success(`Deleted entries for ${format(parseISO(day), 'd MMM')}.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed.')
     }
   }
 
@@ -133,9 +164,9 @@ export function Update() {
           >
             Today
           </Button>
-          <Button variant="primary" size="md" onClick={onSave} disabled={upsert.isPending}>
+          <Button variant="primary" size="md" onClick={onSave} disabled={upsert.isPending || deleteCells.isPending}>
             <Save size={16} />
-            {upsert.isPending ? 'Saving…' : 'Save all'}
+            {upsert.isPending || deleteCells.isPending ? 'Saving…' : 'Save all'}
           </Button>
         </div>
       </div>
@@ -249,21 +280,27 @@ export function Update() {
               {log.map((d) => {
                 const selected = d.date === date
                 return (
-                  <li key={d.date}>
-                    <button
-                      onClick={() => setDate(d.date)}
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
-                        selected
-                          ? 'border-brand/40 bg-brand-soft'
-                          : 'border-transparent hover:bg-surface-2',
-                      )}
-                    >
+                  <li
+                    key={d.date}
+                    className={cn(
+                      'flex items-center gap-1 rounded-lg border pr-1 transition-colors',
+                      selected ? 'border-brand/40 bg-brand-soft' : 'border-transparent hover:bg-surface-2',
+                    )}
+                  >
+                    <button onClick={() => setDate(d.date)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left">
                       <CalendarDays size={16} className={selected ? 'text-brand' : 'text-ink-muted'} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-ink">{format(parseISO(d.date), 'EEE, d MMM')}</p>
                         <p className="tnum text-2xs text-ink-muted">{d.count} value{d.count === 1 ? '' : 's'} logged</p>
                       </div>
+                    </button>
+                    <button
+                      onClick={() => onDeleteDay(d.date)}
+                      aria-label={`Delete entries for ${format(parseISO(d.date), 'd MMM')}`}
+                      title="Delete this day"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad"
+                    >
+                      <Trash2 size={15} />
                     </button>
                   </li>
                 )
@@ -271,7 +308,7 @@ export function Update() {
             </ol>
           )}
           <p className="mt-3 border-t border-line pt-3 text-2xs text-ink-muted">
-            Pick a day above or here to view and edit that day's numbers. The dashboard always shows the monthly roll-up.
+            Click a day to view/edit it — clearing a cell and saving removes that value. Use the trash icon to delete a whole day.
           </p>
         </Panel>
       </div>
