@@ -204,12 +204,12 @@ export function Dashboard() {
 
           <section className="p-4">
             <SectionHead eyebrow="Ranking" title="Team leaderboard" />
-            <MemberLeaderboard data={data} period={activePeriod} />
+            <MemberLeaderboard data={data} period={activePeriod} highlightMarket={selectedMarket} />
           </section>
 
           <section className="p-4">
             <SectionHead eyebrow="Coverage · all KPIs" title="Member × market" />
-            <AdherenceHeatmap data={data} period={activePeriod} />
+            <AdherenceHeatmap data={data} period={activePeriod} highlightMarket={selectedMarket} />
           </section>
         </div>
       </div>

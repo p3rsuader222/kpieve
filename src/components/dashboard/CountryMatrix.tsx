@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { formatCompact, formatPercent } from '@/lib/format'
 import { activeKpis, countryMatrix, type MatrixCell } from '@/lib/metrics'
-import { STATUS_TEXT, type Status } from '@/lib/status'
+import { STATUS_SOFT_BG, STATUS_TEXT, type Status } from '@/lib/status'
 import type { DashboardData } from '@/lib/types'
 import { Flag } from '@/components/ui/Flag'
 
@@ -14,30 +14,25 @@ interface Props {
   onSelect: (marketId: string | null) => void
 }
 
-const STATUS_BAR: Record<Status, string> = {
-  good: 'bg-good',
-  warn: 'bg-warn',
-  bad: 'bg-bad',
-  none: 'bg-line-strong',
-}
+const FILL_VAR: Record<Status, string> = { good: 'good', warn: 'warn', bad: 'bad', none: 'line-strong' }
 
+/** A robust progress bar with the fact / target / % rendered inside it. */
 function Cell({ cell, format }: { cell: MatrixCell; format: ReturnType<typeof activeKpis>[number]['format'] }) {
-  const pct = cell.attainment != null ? Math.max(0, Math.min(1, cell.attainment)) : 0
+  const a = cell.attainment
+  const pct = a != null ? Math.max(0, Math.min(1, a)) : 0
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-baseline gap-1">
-        <span className="tnum text-sm font-semibold text-ink">{formatCompact(cell.fact, format)}</span>
-        <span className="tnum text-2xs text-ink-muted">/ {formatCompact(cell.target, format)}</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
-          <span
-            className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-700', STATUS_BAR[cell.status])}
-            style={{ width: `${pct * 100}%` }}
-          />
+    <div className={cn('relative h-9 w-full overflow-hidden rounded-lg', STATUS_SOFT_BG[cell.status])}>
+      <div
+        className="absolute inset-y-0 left-0 transition-[width] duration-700 ease-smooth"
+        style={{ width: `${pct * 100}%`, background: `hsl(var(--${FILL_VAR[cell.status]}) / 0.34)` }}
+      />
+      <div className="relative z-10 flex h-full items-center justify-between gap-1 px-2.5">
+        <span className="tnum text-sm font-bold leading-none text-ink">
+          {formatCompact(cell.fact, format)}
+          <span className="ml-0.5 text-2xs font-medium text-ink-muted">/ {formatCompact(cell.target, format)}</span>
         </span>
-        <span className={cn('tnum w-9 text-right text-2xs font-semibold', STATUS_TEXT[cell.status])}>
-          {cell.attainment != null ? formatPercent(cell.attainment) : '—'}
+        <span className={cn('tnum text-2xs font-bold leading-none', STATUS_TEXT[cell.status])}>
+          {a != null ? formatPercent(a) : '—'}
         </span>
       </div>
     </div>
@@ -47,11 +42,11 @@ function Cell({ cell, format }: { cell: MatrixCell; format: ReturnType<typeof ac
 export function CountryMatrix({ data, period, selected, onSelect }: Props) {
   const kpis = activeKpis(data)
   const rows = useMemo(() => countryMatrix(data, period), [data, period])
-  const cols = `minmax(112px, 0.85fr) repeat(${kpis.length}, minmax(98px, 1fr))`
+  const cols = `minmax(112px, 0.8fr) repeat(${kpis.length}, minmax(116px, 1fr))`
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[660px]">
+      <div className="min-w-[740px]">
         {/* Header */}
         <div
           className="grid items-end gap-3 border-b border-line px-3 pb-3"

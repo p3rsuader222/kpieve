@@ -11,7 +11,7 @@ interface Props {
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 
 /** Counts up to `value` on mount / change, then renders via `format`. */
-export function AnimatedNumber({ value, format, duration = 850, className }: Props) {
+export function AnimatedNumber({ value, format, duration = 520, className }: Props) {
   const [display, setDisplay] = useState<number | null>(value)
   const fromRef = useRef(0)
   const reduce =

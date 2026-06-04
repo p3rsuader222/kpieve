@@ -10,9 +10,11 @@ interface Props {
   data: DashboardData
   period: string
   kpi?: Kpi
+  /** Emphasise this market's column (selected country). */
+  highlightMarket?: string | null
 }
 
-export function AdherenceHeatmap({ data, period, kpi }: Props) {
+export function AdherenceHeatmap({ data, period, kpi, highlightMarket }: Props) {
   const members = activeMembers(data)
   const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
   const cells = useMemo(() => heatmapPeriod(data, period, kpi), [data, period, kpi])
@@ -30,12 +32,15 @@ export function AdherenceHeatmap({ data, period, kpi }: Props) {
         {/* header */}
         <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
           <span className="eyebrow self-end">Member</span>
-          {markets.map((m) => (
-            <div key={m.id} className="flex flex-col items-center gap-1">
-              <Flag code={m.code} size={20} />
-              <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
-            </div>
-          ))}
+          {markets.map((m) => {
+            const hi = highlightMarket === m.id
+            return (
+              <div key={m.id} className={cn('flex flex-col items-center gap-1 transition-opacity', highlightMarket && !hi && 'opacity-40')}>
+                <Flag code={m.code} size={20} />
+                <span className={cn('text-2xs font-bold uppercase tracking-wider', hi ? 'text-brand-ink' : 'text-ink-muted')}>{m.code}</span>
+              </div>
+            )
+          })}
         </div>
         <div className="space-y-2">
           {members.map((member) => (
@@ -45,12 +50,17 @@ export function AdherenceHeatmap({ data, period, kpi }: Props) {
                 <span className="truncate text-xs font-semibold text-ink">{member.name.split(' ')[0]}</span>
               </div>
               {markets.map((market) => {
+                const hi = highlightMarket === market.id
+                const dim = highlightMarket && !hi
                 const cell = cellMap.get(`${member.id}:${market.id}`)
                 if (!cell?.covered) {
                   return (
                     <div
                       key={market.id}
-                      className="grid h-11 place-items-center rounded-lg border border-dashed border-line text-ink-muted/50"
+                      className={cn(
+                        'grid h-11 place-items-center rounded-lg border border-dashed border-line text-ink-muted/50 transition-opacity',
+                        dim && 'opacity-40',
+                      )}
                     >
                       <span className="text-2xs">·</span>
                     </div>
@@ -61,9 +71,11 @@ export function AdherenceHeatmap({ data, period, kpi }: Props) {
                     key={market.id}
                     title={`${member.name} · ${market.name}: ${cell.attainment != null ? Math.round(cell.attainment * 100) + '%' : '—'}`}
                     className={cn(
-                      'tnum grid h-11 place-items-center rounded-lg text-xs font-bold transition-transform duration-200 hover:scale-[1.04]',
+                      'tnum grid h-11 place-items-center rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.04]',
                       STATUS_SOFT_BG[cell.status],
                       STATUS_TEXT[cell.status],
+                      hi && 'ring-2 ring-inset ring-brand/40',
+                      dim && 'opacity-40',
                     )}
                   >
                     {cell.attainment != null ? `${Math.round(cell.attainment * 100)}%` : '—'}

@@ -9,9 +9,18 @@ import {
 } from '@/lib/metrics'
 import { attainment, statusFromAttainment, STATUS_VAR, type Status } from '@/lib/status'
 import type { DashboardData } from '@/lib/types'
+import { cn } from '@/lib/cn'
 import { Avatar } from '@/components/ui/Avatar'
 
-export function MemberLeaderboard({ data, period }: { data: DashboardData; period: string }) {
+export function MemberLeaderboard({
+  data,
+  period,
+  highlightMarket,
+}: {
+  data: DashboardData
+  period: string
+  highlightMarket?: string | null
+}) {
   const rows = useMemo(() => {
     const kpis = activeKpis(data)
     return activeMembers(data)
@@ -32,10 +41,16 @@ export function MemberLeaderboard({ data, period }: { data: DashboardData; perio
 
   return (
     <ol className="space-y-1">
-      {rows.map((r, i) => (
+      {rows.map((r, i) => {
+        const covers = highlightMarket ? r.member.marketIds.includes(highlightMarket) : true
+        return (
         <li
           key={r.member.id}
-          className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-surface-2"
+          className={cn(
+            'flex items-center gap-3 rounded-xl border px-2 py-2.5 transition-all',
+            covers ? 'border-transparent hover:bg-surface-2' : 'border-transparent opacity-40',
+            highlightMarket && covers && 'border-brand/30 bg-brand-soft',
+          )}
         >
           <span className="tnum w-4 text-center text-xs font-bold text-ink-muted">{i + 1}</span>
           <Avatar initials={r.member.initials} color={r.member.color} avatar={r.member.avatar} size="md" />
@@ -57,7 +72,8 @@ export function MemberLeaderboard({ data, period }: { data: DashboardData; perio
             {r.adherence != null ? formatPercent(r.adherence) : '—'}
           </span>
         </li>
-      ))}
+        )
+      })}
       <li className="mt-2 border-t border-line pt-2.5 text-2xs text-ink-muted">
         Dots show each KPI's status · % = share of the member's KPIs on target.
       </li>
