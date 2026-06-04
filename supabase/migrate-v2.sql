@@ -32,13 +32,22 @@ create policy "authenticated full access" on public.targets
 delete from public.kpis
 where name in ('Clients onboarded','Avg time-to-onboard','Completion rate','CSAT','SLA adherence');
 
+-- De-duplicate any KPIs accidentally inserted twice, then enforce a unique key
+-- on `name` so this insert (and any future re-run) is truly idempotent.
+delete from public.kpis a
+using public.kpis b
+where a.name = b.name and a.ctid > b.ctid;
+
+alter table public.kpis drop constraint if exists kpis_name_uniq;
+alter table public.kpis add constraint kpis_name_uniq unique (name);
+
 insert into public.kpis (name, description, unit, format, direction, aggregation, default_target, sort_order) values
   ('Sellers with 1st active offer',     'New sellers who published their first active offer.',                   'sellers', 'number',  'higher_better', 'sum', 12, 1),
   ('Sellers with 1st order in 30 days', 'Sellers reaching their first order within 30 days of an active offer.', 'sellers', 'number',  'higher_better', 'sum', 7,  2),
   ('PHH ads',                           'Premium home & hardware ads published.',                                'ads',     'number',  'higher_better', 'sum', 12, 3),
   ('Late rate per portfolio CCD',       'Share of portfolio CCDs delivered late (lower is better).',             null,      'percent', 'lower_better',  'avg', 5,  4),
   ('FBP',                               'Fulfilled business plan sellers.',                                      null,      'number',  'higher_better', 'sum', 5,  5)
-on conflict do nothing;
+on conflict (name) do nothing;
 
 -- ---------- 3. Avatars + refresh member accent colors to the pigu palette ----------
 

@@ -33,7 +33,7 @@ create table if not exists public.member_markets (
 
 create table if not exists public.kpis (
   id             uuid primary key default gen_random_uuid(),
-  name           text not null,
+  name           text not null unique,
   description    text,
   unit           text,
   format         text not null default 'number'        check (format in ('number','percent','currency','duration')),
@@ -147,7 +147,7 @@ insert into public.kpis (name, description, unit, format, direction, aggregation
   ('PHH ads',                           'Premium home & hardware ads published.',                        'ads',     'number',  'higher_better', 'sum', 12, 3),
   ('Late rate per portfolio CCD',       'Share of portfolio CCDs delivered late (lower is better).',     null,      'percent', 'lower_better',  'avg', 5,  4),
   ('FBP',                               'Fulfilled business plan sellers.',                              null,      'number',  'higher_better', 'sum', 5,  5)
-on conflict do nothing;
+on conflict (name) do nothing;
 
 -- ---------- Seed: current-month targets (per country) ----------
 -- Targets are configurable per (KPI, country, month) on the Settings page;
