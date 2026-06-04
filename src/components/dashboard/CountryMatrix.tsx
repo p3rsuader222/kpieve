@@ -24,7 +24,7 @@ const STATUS_BAR: Record<Status, string> = {
 function Cell({ cell, format }: { cell: MatrixCell; format: ReturnType<typeof activeKpis>[number]['format'] }) {
   const pct = cell.attainment != null ? Math.max(0, Math.min(1, cell.attainment)) : 0
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1">
         <span className="tnum text-sm font-semibold text-ink">{formatCompact(cell.fact, format)}</span>
         <span className="tnum text-2xs text-ink-muted">/ {formatCompact(cell.target, format)}</span>
@@ -47,11 +47,11 @@ function Cell({ cell, format }: { cell: MatrixCell; format: ReturnType<typeof ac
 export function CountryMatrix({ data, period, selected, onSelect }: Props) {
   const kpis = activeKpis(data)
   const rows = useMemo(() => countryMatrix(data, period), [data, period])
-  const cols = `minmax(116px, 0.9fr) repeat(${kpis.length}, minmax(120px, 1fr))`
+  const cols = `minmax(112px, 0.85fr) repeat(${kpis.length}, minmax(98px, 1fr))`
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[760px]">
+      <div className="min-w-[660px]">
         {/* Header */}
         <div
           className="grid items-end gap-3 border-b border-line px-3 pb-3"
@@ -81,7 +81,7 @@ export function CountryMatrix({ data, period, selected, onSelect }: Props) {
                 onClick={() => onSelect(row.market?.id ?? null)}
                 aria-pressed={isSelected}
                 className={cn(
-                  'relative grid w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200',
+                  'relative grid w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all duration-200',
                   isSelected
                     ? 'border-brand bg-brand-soft shadow-card ring-2 ring-brand/25'
                     : cn('border-transparent hover:bg-surface-2', focused && 'opacity-45 hover:opacity-100'),
