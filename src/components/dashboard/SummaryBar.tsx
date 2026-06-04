@@ -1,18 +1,21 @@
 import { format, parseISO } from 'date-fns'
+import { Globe2, X } from 'lucide-react'
 import { formatPercent } from '@/lib/format'
 import type { KpiSnapshot } from '@/lib/metrics'
 import { STATUS_LABEL, type Status } from '@/lib/status'
 import { ProgressRing } from './ProgressRing'
+import { Flag } from '@/components/ui/Flag'
 
-export function SummaryBar({
-  snaps,
-  period,
-  scopeLabel,
-}: {
+interface Props {
   snaps: KpiSnapshot[]
   period: string
   scopeLabel?: string
-}) {
+  /** The selected country (code + name), or null for the all-countries view. */
+  scopeCountry?: { code: string; name: string } | null
+  onClearScope?: () => void
+}
+
+export function SummaryBar({ snaps, period, scopeLabel, scopeCountry, onClearScope }: Props) {
   const scored = snaps.filter((s) => s.status !== 'none')
   const counts: Record<Status, number> = { good: 0, warn: 0, bad: 0, none: 0 }
   for (const s of snaps) counts[s.status]++
@@ -27,7 +30,8 @@ export function SummaryBar({
   const ringStatus: Status = adherence == null ? 'none' : adherence >= 0.66 ? 'good' : adherence >= 0.34 ? 'warn' : 'bad'
 
   return (
-    <section className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6">
+    <section className="card flex flex-wrap items-center gap-x-6 gap-y-3 p-4">
+      {/* Adherence */}
       <div className="flex items-center gap-4">
         <ProgressRing
           progress={adherence ?? 0}
@@ -50,9 +54,10 @@ export function SummaryBar({
 
       <div className="hidden h-12 w-px bg-line sm:block" />
 
-      <div className="grid flex-1 grid-cols-3 gap-2.5">
+      {/* Compact status tallies (fixed width — never stretch) */}
+      <div className="flex items-center gap-2.5">
         {tallies.map((t) => (
-          <div key={t.status} className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
+          <div key={t.status} className="w-[104px] rounded-xl border border-line bg-surface-2/60 px-3 py-2">
             <div className="flex items-center gap-1.5">
               <span
                 className="h-2 w-2 rounded-full"
@@ -65,6 +70,32 @@ export function SummaryBar({
             <p className="tnum mt-1 font-display text-2xl font-semibold leading-none text-ink">{t.n}</p>
           </div>
         ))}
+      </div>
+
+      {/* Persistent scope indicator (right) — present in both states, so no layout shift */}
+      <div className="ml-auto">
+        {scopeCountry ? (
+          <div className="flex items-center gap-2.5 rounded-xl border-2 border-brand bg-brand-soft py-1.5 pl-2.5 pr-1.5">
+            <Flag code={scopeCountry.code} size={26} />
+            <div className="leading-tight">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-brand-ink">Viewing</p>
+              <p className="font-display text-sm font-semibold text-ink">{scopeCountry.name}</p>
+            </div>
+            <button
+              onClick={onClearScope}
+              aria-label="Show all countries"
+              title="Show all countries"
+              className="ml-1 grid h-7 w-7 place-items-center rounded-lg text-brand-ink transition-colors hover:bg-surface"
+            >
+              <X size={16} strokeWidth={2.4} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2/50 px-3 py-2.5 text-sm font-medium text-ink-muted">
+            <Globe2 size={16} strokeWidth={2} />
+            All countries
+          </div>
+        )}
       </div>
     </section>
   )

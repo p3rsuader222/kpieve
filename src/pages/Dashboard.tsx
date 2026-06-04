@@ -70,28 +70,14 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Prominent selected-country banner */}
-      {selectedCountry && (
-        <div className="flex items-center gap-3 rounded-xl border-2 border-brand bg-brand-soft px-4 py-3 shadow-card">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-line bg-surface">
-            <Flag code={selectedCountry.code} size={28} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-semibold leading-none text-brand-ink">
-              Viewing {selectedCountry.name}
-            </p>
-            <p className="mt-1 text-2xs text-ink-muted">
-              Summary, detail cards &amp; trend are scoped to {selectedCountry.code} — pick another country in the matrix to switch.
-            </p>
-          </div>
-          <Button variant="secondary" size="sm" onClick={() => setSelectedMarket(null)}>
-            Show all countries
-          </Button>
-        </div>
-      )}
-
-      {/* Summary strip */}
-      <SummaryBar snaps={snaps} period={activePeriod} scopeLabel={scopeLabel} />
+      {/* Summary strip — also hosts the persistent country-scope indicator */}
+      <SummaryBar
+        snaps={snaps}
+        period={activePeriod}
+        scopeLabel={scopeLabel}
+        scopeCountry={selectedCountry ? { code: selectedCountry.code, name: selectedCountry.name } : null}
+        onClearScope={() => setSelectedMarket(null)}
+      />
 
       {/* Matrix (hero) + leaderboard */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
