@@ -73,14 +73,14 @@ export function TrendChart({ data, kpi, splitBy }: Props) {
 
   if (rows.length < 2) {
     return (
-      <div className="grid h-[280px] place-items-center text-sm text-ink-muted">
+      <div className="grid h-[230px] place-items-center text-sm text-ink-muted">
         Not enough monthly history yet.
       </div>
     )
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={236}>
       <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
         <defs>
           {series.map((s) => (

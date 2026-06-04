@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { cn } from '@/lib/cn'
 import { STATUS_VAR, type Status } from '@/lib/status'
 
 interface Props {
@@ -23,6 +24,7 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
   }, [clamped])
 
   const offset = c * (1 - shown)
+  const labelSize = size >= 110 ? 'text-2xl' : size >= 84 ? 'text-base' : 'text-sm'
 
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
@@ -42,7 +44,7 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
-        {label && <span className="tnum font-display text-2xl font-semibold leading-none text-ink">{label}</span>}
+        {label && <span className={cn('tnum font-display font-semibold leading-none text-ink', labelSize)}>{label}</span>}
         {sublabel && <span className="mt-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">{sublabel}</span>}
       </div>
     </div>

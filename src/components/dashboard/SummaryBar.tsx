@@ -27,43 +27,42 @@ export function SummaryBar({
   const ringStatus: Status = adherence == null ? 'none' : adherence >= 0.66 ? 'good' : adherence >= 0.34 ? 'warn' : 'bad'
 
   return (
-    <section className="card flex flex-col gap-6 p-5 sm:flex-row sm:items-center sm:gap-8">
-      <div className="flex items-center gap-5">
+    <section className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6">
+      <div className="flex items-center gap-4">
         <ProgressRing
           progress={adherence ?? 0}
           status={ringStatus}
-          size={120}
-          stroke={10}
+          size={84}
+          stroke={8}
           label={adherence != null ? formatPercent(adherence) : '—'}
-          sublabel="on track"
         />
         <div>
           <p className="eyebrow">Team adherence</p>
-          <h2 className="mt-1 max-w-[15ch] text-balance font-display text-xl font-semibold leading-tight text-ink">
-            {counts.good} of {scored.length} KPIs meeting target
+          <h2 className="mt-1 max-w-[16ch] text-balance font-display text-lg font-semibold leading-tight text-ink">
+            {counts.good} of {scored.length} KPIs on target
           </h2>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-0.5 text-xs text-ink-muted">
             {scopeLabel ? `${scopeLabel} · ` : ''}
             {format(parseISO(period), 'MMMM yyyy')}
           </p>
         </div>
       </div>
 
-      <div className="hidden h-16 w-px bg-line sm:block" />
+      <div className="hidden h-12 w-px bg-line sm:block" />
 
-      <div className="grid flex-1 grid-cols-3 gap-3">
+      <div className="grid flex-1 grid-cols-3 gap-2.5">
         {tallies.map((t) => (
-          <div key={t.status} className="rounded-xl border border-line bg-surface-2/60 px-4 py-3">
-            <div className="flex items-center gap-2">
+          <div key={t.status} className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
+            <div className="flex items-center gap-1.5">
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="h-2 w-2 rounded-full"
                 style={{ background: `hsl(var(--${t.status === 'good' ? 'good' : t.status === 'warn' ? 'warn' : 'bad'}))` }}
               />
               <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
                 {STATUS_LABEL[t.status]}
               </span>
             </div>
-            <p className="tnum mt-1.5 font-display text-3xl font-semibold leading-none text-ink">{t.n}</p>
+            <p className="tnum mt-1 font-display text-2xl font-semibold leading-none text-ink">{t.n}</p>
           </div>
         ))}
       </div>

@@ -82,15 +82,14 @@ export function Dashboard() {
   if (isLoading || !data || !selectedKpi) return <DashboardSkeleton />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="eyebrow">Onboarding team · LT · LV · EE · PL</p>
-          <h1 className="mt-1.5 font-display text-3xl font-medium tracking-tight text-ink sm:text-[2.5rem] sm:leading-none">
+          <h1 className="mt-1 font-display text-[1.75rem] font-semibold leading-none tracking-tight text-ink">
             Onboarding KPIs
           </h1>
-          <p className="mt-2 text-sm text-ink-muted">Per-country monthly targets &amp; progress</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <MonthNav period={activePeriod} onChange={setPeriod} periods={periods} />
@@ -124,19 +123,18 @@ export function Dashboard() {
         </Panel>
       </Reveal>
 
-      {/* Focused scope detail — 5 KPI cards */}
-      <div className="flex items-end justify-between">
-        <h2 className="font-display text-xl font-medium text-ink">
+      {/* Focused scope detail — 5 KPI cards in one row */}
+      <div>
+        <h2 className="mb-2.5 font-display text-base font-semibold text-ink">
           {scopeLabel}
-          <span className="ml-2 text-sm font-sans font-normal text-ink-muted">detail</span>
+          <span className="ml-2 text-xs font-sans font-normal text-ink-muted">monthly detail</span>
         </h2>
-      </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {snaps.map((snap, i) => {
-          const selected = snap.kpi.id === selectedKpi.id
-          return (
-            <Reveal key={snap.kpi.id} delay={60 + i * 50}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          {snaps.map((snap) => {
+            const selected = snap.kpi.id === selectedKpi.id
+            return (
               <div
+                key={snap.kpi.id}
                 role="button"
                 tabIndex={0}
                 aria-pressed={selected}
@@ -155,37 +153,21 @@ export function Dashboard() {
               >
                 <KpiCard snap={snap} />
               </div>
-            </Reveal>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       {/* Trends + leaderboard */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel
           className="lg:col-span-2"
-          eyebrow="Month over month"
-          title={selectedKpi.name}
+          eyebrow={`Month over month · ${selectedKpi.name}`}
+          title="Trend"
           actions={
             <SegmentedControl ariaLabel="Split by" size="sm" segments={SPLITS} value={splitBy} onChange={setSplitBy} />
           }
         >
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            {kpis.map((k) => (
-              <button
-                key={k.id}
-                onClick={() => setSelectedKpiId(k.id)}
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                  k.id === selectedKpi.id
-                    ? 'bg-brand text-brand-contrast'
-                    : 'border border-line bg-surface text-ink-muted hover:text-ink',
-                )}
-              >
-                {k.name}
-              </button>
-            ))}
-          </div>
           <TrendChart data={data} kpi={selectedKpi} splitBy={splitBy} />
         </Panel>
 
@@ -195,7 +177,7 @@ export function Dashboard() {
       </div>
 
       {/* Breakdown + heatmap */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel
           eyebrow={selectedKpi.name}
           title={breakdown === 'market' ? 'By country' : 'By member'}

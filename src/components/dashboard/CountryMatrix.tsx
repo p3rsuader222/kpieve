@@ -74,19 +74,24 @@ export function CountryMatrix({ data, period, selected, onSelect }: Props) {
           {rows.map((row) => {
             const isTotal = row.market == null
             const isSelected = (row.market?.id ?? null) === selected
+            const focused = selected !== null
             return (
               <button
                 key={row.id}
                 onClick={() => onSelect(row.market?.id ?? null)}
+                aria-pressed={isSelected}
                 className={cn(
-                  'grid w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
+                  'relative grid w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200',
                   isSelected
-                    ? 'border-brand/40 bg-brand-soft'
-                    : 'border-transparent hover:bg-surface-2',
-                  isTotal && !isSelected && 'border-line bg-surface-2/50',
+                    ? 'border-brand bg-brand-soft shadow-card ring-2 ring-brand/25'
+                    : cn('border-transparent hover:bg-surface-2', focused && 'opacity-45 hover:opacity-100'),
+                  isTotal && !isSelected && 'border-line bg-surface-2/40',
                 )}
                 style={{ gridTemplateColumns: cols }}
               >
+                {isSelected && (
+                  <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-brand" aria-hidden="true" />
+                )}
                 <div className="flex items-center gap-2.5">
                   {isTotal ? (
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink font-display text-2xs font-bold tracking-wide text-paper">

@@ -12,9 +12,9 @@ interface Props {
 
 export function Panel({ title, eyebrow, actions, children, className, bodyClassName }: Props) {
   return (
-    <section className={cn('card flex flex-col p-5', className)}>
+    <section className={cn('card flex flex-col p-4', className)}>
       {(title || actions || eyebrow) && (
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
             {title && <h2 className="font-display text-lg font-semibold leading-tight text-ink">{title}</h2>}
