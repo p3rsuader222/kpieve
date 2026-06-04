@@ -1,44 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion'
 
 interface Props {
   value: number | null
   format: (n: number | null) => string
-  /** ms */
-  duration?: number
   className?: string
 }
 
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
-
-/** Counts up to `value` on mount / change, then renders via `format`. */
-export function AnimatedNumber({ value, format, duration = 520, className }: Props) {
-  const [display, setDisplay] = useState<number | null>(value)
-  const fromRef = useRef(0)
-  const reduce =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+/**
+ * Buttery count-up: a spring (no overshoot) drives a motion value that renders
+ * without React re-renders, so switching scope eases smoothly from the current
+ * number to the next instead of restarting/flickering.
+ */
+export function AnimatedNumber({ value, format, className }: Props) {
+  const reduce = useReducedMotion()
+  const mv = useMotionValue(value ?? 0)
+  const spring = useSpring(mv, { duration: 0.6, bounce: 0 })
+  const text = useTransform(spring, (n) => format(n))
 
   useEffect(() => {
-    if (value == null) {
-      setDisplay(null)
-      return
-    }
-    if (reduce) {
-      setDisplay(value)
-      return
-    }
-    const from = fromRef.current
-    const start = performance.now()
-    let raf = 0
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration)
-      const v = from + (value - from) * easeOut(t)
-      setDisplay(v)
-      if (t < 1) raf = requestAnimationFrame(tick)
-      else fromRef.current = value
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [value, duration, reduce])
+    if (value != null) mv.set(value)
+  }, [value, mv])
 
-  return <span className={className}>{format(display)}</span>
+  if (value == null) return <span className={className}>{format(null)}</span>
+  if (reduce) return <span className={className}>{format(value)}</span>
+  return <motion.span className={className}>{text}</motion.span>
 }

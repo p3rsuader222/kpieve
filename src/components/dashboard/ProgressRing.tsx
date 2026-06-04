@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/cn'
 import { STATUS_VAR, type Status } from '@/lib/status'
 
@@ -18,14 +18,7 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const clamped = Math.max(0, Math.min(1, progress))
-  const [shown, setShown] = useState(0)
-
-  useEffect(() => {
-    const t = requestAnimationFrame(() => setShown(clamped))
-    return () => cancelAnimationFrame(t)
-  }, [clamped])
-
-  const offset = c * (1 - shown)
+  const offset = c * (1 - clamped)
   const labelSize = size >= 110 ? 'text-2xl' : size >= 84 ? 'text-base' : 'text-sm'
 
   return (
@@ -43,7 +36,7 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
           opacity={empty ? 0.7 : 1}
         />
         {!empty && (
-          <circle
+          <motion.circle
             cx={size / 2}
             cy={size / 2}
             r={r}
@@ -52,8 +45,9 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.22,1,0.36,1)' }}
+            initial={false}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ type: 'spring', duration: 0.7, bounce: 0 }}
           />
         )}
       </svg>
