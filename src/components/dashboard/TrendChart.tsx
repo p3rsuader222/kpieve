@@ -16,6 +16,7 @@ import {
   activeMembers,
   listPeriods,
   periodFact,
+  periodTarget,
   totalTarget,
 } from '@/lib/metrics'
 import type { DashboardData, Kpi } from '@/lib/types'
@@ -29,6 +30,8 @@ interface Props {
   data: DashboardData
   kpi: Kpi
   splitBy: SplitBy
+  /** When set, the "Total" line + target reflect this single country. */
+  marketId?: string | null
 }
 
 interface SeriesDef {
@@ -37,7 +40,7 @@ interface SeriesDef {
   color: string
 }
 
-export function TrendChart({ data, kpi, splitBy }: Props) {
+export function TrendChart({ data, kpi, splitBy, marketId }: Props) {
   const c = useThemeColors()
 
   const { rows, series, target } = useMemo(() => {
@@ -48,7 +51,7 @@ export function TrendChart({ data, kpi, splitBy }: Props) {
     let series: SeriesDef[] = []
 
     if (splitBy === 'none') {
-      periods.forEach((p) => (rowMap.get(p)!.value = periodFact(data, kpi, p)))
+      periods.forEach((p) => (rowMap.get(p)!.value = periodFact(data, kpi, p, marketId ? { marketId } : {})))
       series = [{ key: 'value', label: kpi.name, color: c.brand }]
     } else if (splitBy === 'market') {
       data.markets
@@ -65,11 +68,17 @@ export function TrendChart({ data, kpi, splitBy }: Props) {
       })
     }
 
-    // Representative TOTAL target (latest month) for the reference line.
-    const target = splitBy === 'none' && periods.length ? totalTarget(data, kpi, periods[periods.length - 1]) : null
+    // Target reference (latest month) — country target when scoped, else TOTAL.
+    const last = periods.length ? periods[periods.length - 1] : null
+    const target =
+      splitBy === 'none' && last
+        ? marketId
+          ? periodTarget(data, kpi.id, marketId, last)
+          : totalTarget(data, kpi, last)
+        : null
 
     return { rows: periods.map((p) => rowMap.get(p)!), series, target }
-  }, [data, kpi, splitBy, c.brand])
+  }, [data, kpi, splitBy, marketId, c.brand])
 
   if (rows.length < 2) {
     return (

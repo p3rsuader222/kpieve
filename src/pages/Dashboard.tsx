@@ -8,6 +8,7 @@ import { Button, buttonClasses } from '@/components/ui/Button'
 import { Panel } from '@/components/ui/Panel'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Flag } from '@/components/ui/Flag'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { SummaryBar } from '@/components/dashboard/SummaryBar'
 import { CountryMatrix } from '@/components/dashboard/CountryMatrix'
@@ -46,6 +47,8 @@ export function Dashboard() {
 
   if (isLoading || !data || !selectedKpi) return <DashboardSkeleton />
 
+  const selectedCountry = selectedMarket ? data.markets.find((m) => m.id === selectedMarket) ?? null : null
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -66,6 +69,26 @@ export function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Prominent selected-country banner */}
+      {selectedCountry && (
+        <div className="flex items-center gap-3 rounded-xl border-2 border-brand bg-brand-soft px-4 py-3 shadow-card">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-line bg-surface">
+            <Flag code={selectedCountry.code} size={28} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-lg font-semibold leading-none text-brand-ink">
+              Viewing {selectedCountry.name}
+            </p>
+            <p className="mt-1 text-2xs text-ink-muted">
+              Summary, detail cards &amp; trend are scoped to {selectedCountry.code} — pick another country in the matrix to switch.
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setSelectedMarket(null)}>
+            Show all countries
+          </Button>
+        </div>
+      )}
 
       {/* Summary strip */}
       <SummaryBar snaps={snaps} period={activePeriod} scopeLabel={scopeLabel} />
@@ -94,9 +117,10 @@ export function Dashboard() {
 
       {/* Focused detail — 5 KPI cards in one row */}
       <div>
-        <h2 className="mb-2 font-display text-sm font-semibold text-ink">
+        <h2 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold text-ink">
+          {selectedCountry && <Flag code={selectedCountry.code} size={20} />}
           {scopeLabel}
-          <span className="ml-2 text-xs font-sans font-normal text-ink-muted">monthly detail · click to focus a KPI</span>
+          <span className="text-xs font-sans font-normal text-ink-muted">monthly detail · click to focus a KPI</span>
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {snaps.map((snap) => {
@@ -131,13 +155,13 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <Panel
           className="lg:col-span-8"
-          eyebrow={`Month over month · ${selectedKpi.name}`}
-          title="Trend"
+          eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
+          title="Trend over time"
           actions={
             <SegmentedControl ariaLabel="Split by" size="sm" segments={SPLITS} value={splitBy} onChange={setSplitBy} />
           }
         >
-          <TrendChart data={data} kpi={selectedKpi} splitBy={splitBy} />
+          <TrendChart data={data} kpi={selectedKpi} splitBy={splitBy} marketId={selectedMarket} />
         </Panel>
 
         <Panel className="lg:col-span-4" eyebrow="Coverage · all KPIs" title="Member × market">

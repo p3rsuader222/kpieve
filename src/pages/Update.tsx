@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { format, parseISO } from 'date-fns'
-import { CalendarDays, Database, Save } from 'lucide-react'
+import { addDays, format, parseISO } from 'date-fns'
+import { CalendarDays, ChevronLeft, ChevronRight, Database, Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
   activeKpis,
@@ -30,6 +30,7 @@ export function Update() {
   const toast = useToast()
 
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
   const period = monthStart(date)
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
@@ -90,16 +91,39 @@ export function Update() {
           <p className="mt-2 text-sm text-ink-muted">Log each member's numbers for the day — progress rolls up to the month.</p>
         </div>
         <div className="flex items-end gap-2.5">
-          <label className="block">
+          <div>
             <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Day</span>
-            <input
-              type="date"
-              value={date}
-              max={format(new Date(), 'yyyy-MM-dd')}
-              onChange={(e) => setDate(e.target.value)}
-              className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </label>
+            <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
+              <button
+                onClick={() => setDate(format(addDays(parseISO(date), -1), 'yyyy-MM-dd'))}
+                aria-label="Previous day"
+                className="grid h-8 w-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+              >
+                <ChevronLeft size={17} strokeWidth={2.2} />
+              </button>
+              <input
+                type="date"
+                value={date}
+                max={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setDate(e.target.value)}
+                className="tnum h-8 border-0 bg-transparent px-1 text-sm font-medium text-ink focus:outline-none"
+              />
+              <button
+                onClick={() => {
+                  const next = format(addDays(parseISO(date), 1), 'yyyy-MM-dd')
+                  if (next <= todayStr) setDate(next)
+                }}
+                disabled={date >= todayStr}
+                aria-label="Next day"
+                className={cn(
+                  'grid h-8 w-8 place-items-center rounded-lg transition-colors',
+                  date >= todayStr ? 'cursor-not-allowed text-ink-muted/40' : 'text-ink-muted hover:bg-surface-2 hover:text-ink',
+                )}
+              >
+                <ChevronRight size={17} strokeWidth={2.2} />
+              </button>
+            </div>
+          </div>
           <Button variant="primary" size="md" onClick={onSave} disabled={upsert.isPending}>
             <Save size={16} />
             {upsert.isPending ? 'Saving…' : 'Save all'}
@@ -154,7 +178,7 @@ export function Update() {
                   const t = periodTarget(data, activeKpi.id, m.id, period)
                   const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
                   return (
-                    <div key={m.id} className="flex flex-col items-center gap-1">
+                    <div key={m.id} className="flex flex-col items-start gap-1">
                       <Flag code={m.code} size={26} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
                       <span className="tnum text-2xs leading-tight text-ink-muted/80">
@@ -196,7 +220,7 @@ export function Update() {
                           step="any"
                           value={values[k] ?? ''}
                           onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                          className="tnum h-11 w-full rounded-lg border border-line bg-surface px-2 text-center text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                          className="tnum h-11 w-full rounded-lg border border-line bg-surface px-3 text-left text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                         />
                       )
                     })}
