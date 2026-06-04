@@ -40,12 +40,14 @@ insert into public.kpis (name, description, unit, format, direction, aggregation
   ('FBP',                               'Fulfilled business plan sellers.',                                      null,      'number',  'higher_better', 'sum', 5,  5)
 on conflict do nothing;
 
--- ---------- 3. (Optional) refresh member accent colors to the new palette ----------
+-- ---------- 3. Avatars + refresh member accent colors to the pigu palette ----------
 
-update public.members set color = '#C15F3C' where initials = 'GK';
-update public.members set color = '#5B8C4F' where initials = 'KT';
-update public.members set color = '#C2840E' where initials = 'MK';
-update public.members set color = '#7A6BC0' where initials = 'RB';
+alter table public.members add column if not exists avatar text;
+
+update public.members set color = '#0A7AFF', avatar = coalesce(avatar, 'preset:w1') where initials = 'GK';
+update public.members set color = '#1098AD', avatar = coalesce(avatar, 'preset:m1') where initials = 'KT';
+update public.members set color = '#E8A100', avatar = coalesce(avatar, 'preset:w4') where initials = 'MK';
+update public.members set color = '#7C5CFF', avatar = coalesce(avatar, 'preset:w7') where initials = 'RB';
 
 -- ---------- 4. Seed current-month targets (per country) ----------
 

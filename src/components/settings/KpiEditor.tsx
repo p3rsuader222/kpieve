@@ -119,7 +119,7 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
         </div>
         <div className="flex items-end justify-between gap-3">
           <Input
-            label="Target (per member · market · day)"
+            label="Default target (per country · month)"
             type="number"
             step="any"
             value={f.default_target}
@@ -127,8 +127,9 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
             placeholder="e.g. 3"
             className="max-w-[60%]"
           />
-          <div className="pb-2">
-            <Toggle checked={f.active} onChange={(v) => set('active', v)} label="Active" />
+          <div className="flex items-center gap-2.5 pb-2">
+            <Toggle checked={f.active} onChange={(v) => set('active', v)} ariaLabel="Active" />
+            <span className="text-sm font-medium text-ink-soft">Active</span>
           </div>
         </div>
       </div>

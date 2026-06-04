@@ -4,6 +4,7 @@ import { activeMembers, heatmapPeriod } from '@/lib/metrics'
 import { STATUS_SOFT_BG, STATUS_TEXT } from '@/lib/status'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
+import { Flag } from '@/components/ui/Flag'
 
 interface Props {
   data: DashboardData
@@ -27,19 +28,20 @@ export function AdherenceHeatmap({ data, period, kpi }: Props) {
     <div className="overflow-x-auto">
       <div className="min-w-[360px]">
         {/* header */}
-        <div className="grid items-center gap-2 pb-2" style={{ gridTemplateColumns: cols }}>
-          <span className="eyebrow">Member</span>
+        <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
+          <span className="eyebrow self-end">Member</span>
           {markets.map((m) => (
-            <span key={m.id} className="text-center text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-              {m.code}
-            </span>
+            <div key={m.id} className="flex flex-col items-center gap-1">
+              <Flag code={m.code} size={20} />
+              <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
+            </div>
           ))}
         </div>
         <div className="space-y-2">
           {members.map((member) => (
             <div key={member.id} className="grid items-center gap-2" style={{ gridTemplateColumns: cols }}>
               <div className="flex min-w-0 items-center gap-2">
-                <Avatar initials={member.initials} color={member.color} size="sm" />
+                <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="sm" />
                 <span className="truncate text-xs font-semibold text-ink">{member.name.split(' ')[0]}</span>
               </div>
               {markets.map((market) => {

@@ -3,12 +3,15 @@ import { cn } from '@/lib/cn'
 import { formatValue } from '@/lib/format'
 import { STATUS_VAR, type Status } from '@/lib/status'
 import type { Kpi } from '@/lib/types'
+import { Flag } from '@/components/ui/Flag'
 
 export interface BreakdownItem {
   id: string
   label: string
   sublabel?: string
   color?: string
+  /** Market code → renders a flag chip before the label. */
+  flag?: string
   value: number | null
   target: number | null
   attainment: number | null
@@ -24,6 +27,7 @@ export function BreakdownList({ items, kpi }: { items: BreakdownItem[]; kpi: Kpi
         return (
           <li key={it.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5">
             <div className="flex items-center gap-2">
+              {it.flag && <Flag code={it.flag} size={18} />}
               {it.color && <span className="h-2.5 w-2.5 rounded-full" style={{ background: it.color }} />}
               <span className="text-sm font-semibold text-ink">{it.label}</span>
               {it.sublabel && <span className="text-2xs text-ink-muted">{it.sublabel}</span>}

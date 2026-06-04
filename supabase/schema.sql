@@ -19,9 +19,10 @@ create table if not exists public.members (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   initials    text not null,
-  color       text not null default '#3457b8',
+  color       text not null default '#0A7AFF',
   active      boolean not null default true,
-  sort_order  int  not null default 0
+  sort_order  int  not null default 0,
+  avatar      text          -- preset key ("preset:w1") or image data URL / URL
 );
 
 create table if not exists public.member_markets (
@@ -119,11 +120,11 @@ insert into public.markets (code, name, sort_order) values
   ('PL', 'Poland',    4)
 on conflict (code) do nothing;
 
-insert into public.members (name, initials, color, sort_order) values
-  ('Greta Kazlauskaitė', 'GK', '#C15F3C', 1),
-  ('Karl Tamm',          'KT', '#5B8C4F', 2),
-  ('Marta Kowalska',     'MK', '#C2840E', 3),
-  ('Rūta Bērziņa',       'RB', '#7A6BC0', 4)
+insert into public.members (name, initials, color, sort_order, avatar) values
+  ('Greta Kazlauskaitė', 'GK', '#0A7AFF', 1, 'preset:w1'),
+  ('Karl Tamm',          'KT', '#1098AD', 2, 'preset:m1'),
+  ('Marta Kowalska',     'MK', '#E8A100', 3, 'preset:w4'),
+  ('Rūta Bērziņa',       'RB', '#7C5CFF', 4, 'preset:w7')
 on conflict do nothing;
 
 -- Coverage (members cover multiple markets).

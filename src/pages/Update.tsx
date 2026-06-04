@@ -11,6 +11,7 @@ import { useUpsertEntries } from '@/hooks/useEntryMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
+import { Flag } from '@/components/ui/Flag'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 
@@ -136,14 +137,15 @@ export function Update() {
 
         <div className="overflow-x-auto">
           <div className="min-w-[460px]">
-            <div className="grid items-end gap-2 pb-2" style={{ gridTemplateColumns: cols }}>
-              <span className="eyebrow">Member</span>
+            <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
+              <span className="eyebrow self-end">Member</span>
               {markets.map((m) => {
                 const t = periodTarget(data, activeKpi.id, m.id, period)
                 return (
-                  <div key={m.id} className="text-center">
-                    <span className="block text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
-                    <span className="tnum mt-0.5 block text-2xs text-ink-muted/80">
+                  <div key={m.id} className="flex flex-col items-center gap-1">
+                    <Flag code={m.code} size={22} />
+                    <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
+                    <span className="tnum text-2xs text-ink-muted/80">
                       tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
                     </span>
                   </div>
@@ -154,7 +156,7 @@ export function Update() {
               {members.map((member) => (
                 <div key={member.id} className="grid items-center gap-2" style={{ gridTemplateColumns: cols }}>
                   <div className="flex min-w-0 items-center gap-2">
-                    <Avatar initials={member.initials} color={member.color} size="sm" />
+                    <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="sm" />
                     <span className="truncate text-sm font-medium text-ink">{member.name}</span>
                   </div>
                   {markets.map((market) => {

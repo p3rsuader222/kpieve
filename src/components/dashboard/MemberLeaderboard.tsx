@@ -38,7 +38,7 @@ export function MemberLeaderboard({ data, period }: { data: DashboardData; perio
           className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-surface-2"
         >
           <span className="tnum w-4 text-center text-xs font-bold text-ink-muted">{i + 1}</span>
-          <Avatar initials={r.member.initials} color={r.member.color} size="md" />
+          <Avatar initials={r.member.initials} color={r.member.color} avatar={r.member.avatar} size="md" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink">{r.member.name}</p>
             <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted">{r.markets}</p>

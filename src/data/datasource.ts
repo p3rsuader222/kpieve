@@ -30,7 +30,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
 
   const [markets, members, memberMarkets, kpis, entries, targets] = await Promise.all([
     supabase.from('markets').select('id, code, name, sort_order').order('sort_order'),
-    supabase.from('members').select('id, name, initials, color, active, sort_order').order('sort_order'),
+    supabase.from('members').select('id, name, initials, color, active, sort_order, avatar').order('sort_order'),
     supabase.from('member_markets').select('member_id, market_id'),
     supabase.from('kpis').select('*').order('sort_order'),
     supabase

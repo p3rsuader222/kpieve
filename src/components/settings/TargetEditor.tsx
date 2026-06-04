@@ -5,6 +5,7 @@ import { activeKpis, periodTarget } from '@/lib/metrics'
 import type { DashboardData } from '@/lib/types'
 import type { TargetUpsert } from '@/data/datasource'
 import { Button } from '@/components/ui/Button'
+import { Flag } from '@/components/ui/Flag'
 
 interface Props {
   data: DashboardData
@@ -70,12 +71,13 @@ export function TargetEditor({ data, saving, onSave }: Props) {
 
       <div className="overflow-x-auto">
         <div className="min-w-[480px]">
-          <div className="grid items-center gap-2 pb-2" style={{ gridTemplateColumns: cols }}>
-            <span className="eyebrow">KPI</span>
+          <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
+            <span className="eyebrow self-end">KPI</span>
             {markets.map((m) => (
-              <span key={m.id} className="text-center text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-                {m.code}
-              </span>
+              <div key={m.id} className="flex flex-col items-center gap-1">
+                <Flag code={m.code} size={22} />
+                <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
+              </div>
             ))}
           </div>
           <div className="space-y-2">

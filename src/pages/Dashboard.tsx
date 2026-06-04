@@ -61,6 +61,7 @@ export function Dashboard() {
         id: r.entity.id,
         label: r.entity.code,
         sublabel: r.entity.name,
+        flag: r.entity.code,
         value: r.value,
         target: r.target,
         attainment: r.attainment,

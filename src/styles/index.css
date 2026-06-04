@@ -3,63 +3,70 @@
 @tailwind utilities;
 
 /* ============================================================
-   Design tokens — "Claude desktop" warm editorial calm
-   Warm cream canvas, near-white cards, single clay accent.
+   Design tokens — pigu.lt brand system
+   Crisp white canvas, electric blue primary, lime spark accent,
+   neutral-black ink. Light-first; dark is a faithful inversion.
    HSL channels only (consumed via hsl(var(--x) / <alpha>)).
    ============================================================ */
 @layer base {
   :root {
-    --paper: 48 33% 97%;        /* #FAF9F5 warm cream */
+    --paper: 210 22% 96%;       /* #F4F6F8 cool off-white */
     --surface: 0 0% 100%;       /* #FFFFFF */
-    --surface-2: 48 25% 92%;    /* #F0EEE6 warm sand */
+    --surface-2: 213 27% 94%;   /* #EAEEF3 */
 
-    --ink: 30 3% 12%;           /* #1F1E1D warm near-black */
-    --ink-soft: 45 3% 23%;      /* #3D3C39 */
-    --ink-muted: 48 3% 44%;     /* #73726C warm gray */
+    --ink: 0 0% 9%;             /* #171717 neutral black */
+    --ink-soft: 217 6% 24%;     /* #3A3D42 */
+    --ink-muted: 220 9% 46%;    /* #6B7280 */
 
-    --line: 45 21% 89%;         /* #E8E5DC quiet warm border */
-    --line-strong: 45 17% 82%;  /* #D8D4C8 */
+    --line: 213 19% 91%;        /* #E3E7EC */
+    --line-strong: 212 17% 83%; /* #CBD2DA */
 
-    --brand: 16 53% 50%;        /* #C15F3C clay / terracotta */
-    --brand-soft: 20 49% 92%;   /* #F4E6DF accent wash */
-    --brand-ink: 16 58% 42%;    /* readable clay text */
+    --brand: 213 100% 52%;      /* #0A7AFF pigu blue */
+    --brand-soft: 214 100% 94%; /* #E1EEFF wash */
+    --brand-ink: 213 82% 44%;   /* #0A66D6 readable blue text */
     --brand-contrast: 0 0% 100%;
 
-    --good: 108 28% 43%;        /* #5B8C4F muted green */
-    --good-soft: 108 24% 92%;
-    --warn: 39 73% 41%;         /* #C2840E amber */
-    --warn-soft: 39 70% 90%;
-    --bad: 4 53% 50%;           /* #C2453B true red */
-    --bad-soft: 4 53% 92%;
+    --accent: 68 100% 48%;      /* #D4F700 lime spark */
+    --accent-contrast: 0 0% 9%; /* black text on lime */
 
-    --shadow: 30 20% 22%;
+    --good: 160 60% 49%;        /* #32C998 */
+    --good-soft: 158 57% 93%;
+    --warn: 42 100% 46%;        /* #E8A100 amber */
+    --warn-soft: 42 85% 92%;
+    --bad: 352 61% 50%;         /* #CE3247 */
+    --bad-soft: 352 75% 94%;
+
+    --shadow: 213 30% 25%;
 
     color-scheme: light;
   }
 
   .dark {
-    --paper: 60 3% 15%;         /* #262624 warm charcoal */
-    --surface: 60 2% 18%;       /* #30302E */
-    --surface-2: 60 3% 22%;     /* #3A3A37 */
+    --paper: 217 17% 9%;        /* #14171C */
+    --surface: 218 17% 13%;     /* #1B1F26 */
+    --surface-2: 216 17% 17%;   /* #242A33 */
 
-    --ink: 48 26% 95%;          /* #F5F4EE cream */
-    --ink-soft: 48 11% 82%;     /* #D6D4CC */
-    --ink-muted: 48 5% 59%;     /* #9C9A92 */
+    --ink: 210 22% 96%;         /* #F4F6F8 */
+    --ink-soft: 215 13% 79%;    /* #C2C8D0 */
+    --ink-muted: 218 10% 58%;   /* #8A92A0 */
 
-    --line: 48 4% 25%;          /* #43423E */
-    --line-strong: 45 5% 32%;   /* #55534D */
+    --line: 216 16% 21%;        /* #2C333D */
+    --line-strong: 218 14% 27%; /* #3C4350 */
 
-    --brand: 15 60% 60%;        /* #D97757 clay (lifted for dark) */
-    --brand-soft: 18 17% 19%;   /* #3A2E29 */
-    --brand-ink: 16 64% 66%;
-    --brand-contrast: 30 3% 12%;
+    --brand: 212 100% 59%;      /* #2E90FF lifted blue */
+    --brand-soft: 217 56% 19%;  /* #15294A */
+    --brand-ink: 212 100% 72%;
+    --brand-contrast: 0 0% 100%;
 
-    --good: 108 30% 55%;
-    --good-soft: 108 22% 18%;
-    --warn: 39 80% 58%;
-    --warn-soft: 39 40% 20%;
-    --bad: 4 65% 62%;
-    --bad-soft: 4 40% 22%;
+    --accent: 68 100% 48%;      /* lime holds up on dark */
+    --accent-contrast: 0 0% 9%;
+
+    --good: 160 55% 55%;
+    --good-soft: 160 30% 18%;
+    --warn: 42 90% 58%;
+    --warn-soft: 42 40% 20%;
+    --bad: 352 65% 62%;
+    --bad-soft: 352 35% 24%;
 
     --shadow: 0 0% 0%;
 

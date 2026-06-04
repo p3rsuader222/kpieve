@@ -20,6 +20,10 @@ export default {
           ink: 'hsl(var(--brand-ink) / <alpha-value>)',
           contrast: 'hsl(var(--brand-contrast) / <alpha-value>)',
         },
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          contrast: 'hsl(var(--accent-contrast) / <alpha-value>)',
+        },
         good: 'hsl(var(--good) / <alpha-value>)',
         'good-soft': 'hsl(var(--good-soft) / <alpha-value>)',
         warn: 'hsl(var(--warn) / <alpha-value>)',
@@ -28,7 +32,7 @@ export default {
         'bad-soft': 'hsl(var(--bad-soft) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['Newsreader', 'Georgia', 'serif'],
+        display: ['Outfit', '"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {

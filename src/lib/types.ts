@@ -20,6 +20,11 @@ export interface Member {
   color: string // hex accent used in charts/avatars
   active: boolean
   sort_order: number
+  /**
+   * Avatar source. Either a preset key ("preset:w1".."preset:w10", "preset:m1")
+   * or an image data URL / URL. Null → tinted initials fallback.
+   */
+  avatar?: string | null
   /** Market ids this member covers (from member_markets join). */
   marketIds: string[]
 }

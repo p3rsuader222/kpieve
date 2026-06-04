@@ -21,10 +21,10 @@ const MARKETS: Market[] = [
 ]
 
 const MEMBERS: Member[] = [
-  { id: 'mem-1', name: 'Greta Kazlauskaitė', initials: 'GK', color: '#C15F3C', active: true, sort_order: 1, marketIds: ['mk-lt', 'mk-lv'] },
-  { id: 'mem-2', name: 'Karl Tamm', initials: 'KT', color: '#5B8C4F', active: true, sort_order: 2, marketIds: ['mk-ee', 'mk-lt'] },
-  { id: 'mem-3', name: 'Marta Kowalska', initials: 'MK', color: '#C2840E', active: true, sort_order: 3, marketIds: ['mk-pl', 'mk-lv'] },
-  { id: 'mem-4', name: 'Rūta Bērziņa', initials: 'RB', color: '#7A6BC0', active: true, sort_order: 4, marketIds: ['mk-pl', 'mk-ee'] },
+  { id: 'mem-1', name: 'Greta Kazlauskaitė', initials: 'GK', color: '#0A7AFF', active: true, sort_order: 1, marketIds: ['mk-lt', 'mk-lv'], avatar: 'preset:w1' },
+  { id: 'mem-2', name: 'Karl Tamm', initials: 'KT', color: '#1098AD', active: true, sort_order: 2, marketIds: ['mk-ee', 'mk-lt'], avatar: 'preset:m1' },
+  { id: 'mem-3', name: 'Marta Kowalska', initials: 'MK', color: '#E8A100', active: true, sort_order: 3, marketIds: ['mk-pl', 'mk-lv'], avatar: 'preset:w4' },
+  { id: 'mem-4', name: 'Rūta Bērziņa', initials: 'RB', color: '#7C5CFF', active: true, sort_order: 4, marketIds: ['mk-pl', 'mk-ee'], avatar: 'preset:w7' },
 ]
 
 /** The real KPIs from Evelina's workbook. */

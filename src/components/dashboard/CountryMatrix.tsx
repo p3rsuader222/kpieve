@@ -4,6 +4,7 @@ import { formatCompact, formatPercent } from '@/lib/format'
 import { activeKpis, countryMatrix, type MatrixCell } from '@/lib/metrics'
 import { STATUS_TEXT, type Status } from '@/lib/status'
 import type { DashboardData } from '@/lib/types'
+import { Flag } from '@/components/ui/Flag'
 
 interface Props {
   data: DashboardData
@@ -87,14 +88,15 @@ export function CountryMatrix({ data, period, selected, onSelect }: Props) {
                 style={{ gridTemplateColumns: cols }}
               >
                 <div className="flex items-center gap-2.5">
-                  <span
-                    className={cn(
-                      'grid h-9 w-9 shrink-0 place-items-center rounded-lg font-display text-sm font-semibold',
-                      isTotal ? 'bg-ink text-paper' : 'bg-surface-2 text-ink',
-                    )}
-                  >
-                    {row.code}
-                  </span>
+                  {isTotal ? (
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink font-display text-2xs font-bold tracking-wide text-paper">
+                      ALL
+                    </span>
+                  ) : (
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface">
+                      <Flag code={row.code} size={24} />
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">{row.name}</p>
                     <p className="tnum text-2xs text-ink-muted">

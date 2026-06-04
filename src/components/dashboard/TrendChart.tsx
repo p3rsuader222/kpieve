@@ -23,7 +23,7 @@ import { useThemeColors } from '@/hooks/useThemeColors'
 
 export type SplitBy = 'none' | 'market' | 'member'
 
-const MARKET_COLORS = ['#C15F3C', '#5B8C4F', '#C2840E', '#7A6BC0']
+const MARKET_COLORS = ['#0A7AFF', '#32C998', '#E8A100', '#CE3247']
 
 interface Props {
   data: DashboardData
