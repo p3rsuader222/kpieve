@@ -156,10 +156,24 @@ export function Settings() {
         </div>
       )}
 
-      {/* Targets — wide KPI × country grid; uses the full width */}
-      <Panel eyebrow="Per country · per month" title="Targets">
-        <TargetEditor data={data} saving={m.upsertTargets.isPending} onSave={saveTargets} />
-      </Panel>
+      {/* Targets (editor) + Markets (reference) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel className="lg:col-span-2" eyebrow="Per country · per month" title="Targets">
+          <TargetEditor data={data} saving={m.upsertTargets.isPending} onSave={saveTargets} />
+        </Panel>
+        <Panel eyebrow="Reference" title="Markets">
+          <div className="flex flex-wrap gap-2">
+            {markets.map((mk) => (
+              <span key={mk.id} className="chip text-ink-soft">
+                {mk.code} · {mk.name}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-2xs text-ink-muted">
+            The LT · LV · EE · PL markets are seeded in the database. Assign them to members below.
+          </p>
+        </Panel>
+      </div>
 
       {/* KPIs + Members side by side */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -245,20 +259,6 @@ export function Settings() {
         </ul>
       </Panel>
       </div>
-
-      {/* Markets (reference) */}
-      <Panel eyebrow="Reference" title="Markets">
-        <div className="flex flex-wrap gap-2">
-          {markets.map((mk) => (
-            <span key={mk.id} className="chip text-ink-soft">
-              {mk.code} · {mk.name}
-            </span>
-          ))}
-        </div>
-        <p className="mt-3 text-2xs text-ink-muted">
-          The LT · LV · EE · PL markets are seeded in the database. Assign them to members above.
-        </p>
-      </Panel>
 
       <KpiEditor open={kpiOpen} kpi={editingKpi} saving={m.saveKpi.isPending} onClose={() => setKpiOpen(false)} onSubmit={submitKpi} />
       <MemberEditor

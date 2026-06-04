@@ -65,6 +65,7 @@ export function SummaryBar({ snaps, period, scopeCountry, onClearScope }: Props)
           size={76}
           stroke={8}
           label={adherence != null ? formatPercent(adherence) : '—'}
+          empty={adherence == null}
         />
         <div className="min-w-0">
           <p className="eyebrow">Team adherence</p>

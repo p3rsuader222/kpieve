@@ -58,6 +58,9 @@ export function MemberLeaderboard({ data, period }: { data: DashboardData; perio
           </span>
         </li>
       ))}
+      <li className="mt-2 border-t border-line pt-2.5 text-2xs text-ink-muted">
+        Dots show each KPI's status · % = share of the member's KPIs on target.
+      </li>
     </ol>
   )
 }

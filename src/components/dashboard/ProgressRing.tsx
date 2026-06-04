@@ -10,9 +10,11 @@ interface Props {
   stroke?: number
   label?: string
   sublabel?: string
+  /** No data yet → render a neutral dashed ring instead of an empty 0% arc. */
+  empty?: boolean
 }
 
-export function ProgressRing({ progress, status, size = 132, stroke = 11, label, sublabel }: Props) {
+export function ProgressRing({ progress, status, size = 132, stroke = 11, label, sublabel, empty = false }: Props) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const clamped = Math.max(0, Math.min(1, progress))
@@ -29,19 +31,31 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--surface-2))" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={STATUS_VAR[status]}
-          strokeWidth={stroke}
+          stroke={empty ? 'hsl(var(--line-strong))' : 'hsl(var(--surface-2))'}
+          strokeWidth={empty ? 2 : stroke}
+          strokeDasharray={empty ? '2 5' : undefined}
           strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)' }}
+          opacity={empty ? 0.7 : 1}
         />
+        {!empty && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={STATUS_VAR[status]}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)' }}
+          />
+        )}
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
         {label && <span className={cn('tnum font-display font-semibold leading-none text-ink', labelSize)}>{label}</span>}

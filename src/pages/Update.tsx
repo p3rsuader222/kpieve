@@ -124,6 +124,15 @@ export function Update() {
               </button>
             </div>
           </div>
+          <Button
+            variant="subtle"
+            size="md"
+            onClick={() => setDate(todayStr)}
+            disabled={date === todayStr}
+            title="Jump to today"
+          >
+            Today
+          </Button>
           <Button variant="primary" size="md" onClick={onSave} disabled={upsert.isPending}>
             <Save size={16} />
             {upsert.isPending ? 'Saving…' : 'Save all'}

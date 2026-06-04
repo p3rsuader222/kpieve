@@ -10,6 +10,7 @@ import { Sparkline } from './Sparkline'
 
 export function KpiCard({ snap }: { snap: KpiSnapshot }) {
   const { kpi, value, target, attainment, status, delta, deltaGood, spark } = snap
+  const noData = value == null
   const ringLabel = attainment != null ? formatPercent(attainment) : '—'
   const DeltaIcon = delta == null || delta === 0 ? Minus : delta > 0 ? ArrowUpRight : ArrowDownRight
 
@@ -22,7 +23,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
         <p className="mt-1 flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-2xs font-medium text-ink-muted">
             <StatusDot status={status} />
-            {STATUS_LABEL[status]}
+            {noData ? 'No data yet' : STATUS_LABEL[status]}
           </span>
           {target != null && (
             <span className="tnum text-2xs font-semibold text-ink-muted">
@@ -55,7 +56,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
             </span>
           )}
         </div>
-        <ProgressRing progress={attainment ?? 0} status={status} size={68} stroke={7} label={ringLabel} />
+        <ProgressRing progress={attainment ?? 0} status={status} size={68} stroke={7} label={ringLabel} empty={noData} />
       </div>
 
       <div className="mt-auto">

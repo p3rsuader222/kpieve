@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { Info, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import { activeKpis, listPeriods, monthStart, snapshotsForPeriod, type Granularity } from '@/lib/metrics'
@@ -64,27 +65,44 @@ export function Dashboard() {
 
   const selectedCountry = selectedMarket ? data.markets.find((m) => m.id === selectedMarket) ?? null : null
   const scopeLabel = selectedCountry?.name ?? 'All countries'
+  const monthLabel = format(parseISO(activePeriod), 'MMMM yyyy')
+  const hasData = snaps.some((s) => s.value != null)
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="eyebrow">Onboarding team · LT · LV · EE · PL</p>
-          <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
-            Onboarding KPIs
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <MonthNav period={activePeriod} onChange={setPeriod} periods={periods} />
-          <Button variant="secondary" size="md" onClick={() => refetch()} aria-label="Refresh" className="px-3">
-            <RefreshCw size={16} className={cn(isFetching && 'animate-spin')} />
-          </Button>
-          <Link to="/update" className={buttonClasses('primary', 'md')}>
-            Update data
-          </Link>
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="eyebrow">Onboarding team · LT · LV · EE · PL</p>
+            <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
+              Onboarding KPIs
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <MonthNav period={activePeriod} onChange={setPeriod} periods={periods} />
+            <Button variant="secondary" size="md" onClick={() => refetch()} aria-label="Refresh" className="px-3">
+              <RefreshCw size={16} className={cn(isFetching && 'animate-spin')} />
+            </Button>
+            <Link to="/update" className={buttonClasses('primary', 'md')}>
+              Update data
+            </Link>
+          </div>
         </div>
       </div>
+
+      {!hasData && (
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-2.5 text-sm text-ink-soft">
+          <Info size={16} className="shrink-0 text-brand" />
+          <span>
+            No numbers logged for <strong className="font-semibold text-ink">{monthLabel}</strong> yet — head to{' '}
+            <Link to="/update" className="font-semibold text-brand-ink underline underline-offset-2">
+              Update
+            </Link>{' '}
+            to enter the team's daily figures.
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* LEFT column — matrix · detail · trend, joined */}
