@@ -31,7 +31,7 @@ export function AdherenceHeatmap({ data, period, kpi }: Props) {
         <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
           <span className="eyebrow self-end">Member</span>
           {markets.map((m) => (
-            <div key={m.id} className="flex flex-col items-start gap-1">
+            <div key={m.id} className="flex flex-col items-center gap-1">
               <Flag code={m.code} size={20} />
               <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
             </div>

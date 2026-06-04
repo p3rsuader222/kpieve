@@ -100,7 +100,7 @@ export function TargetEditor({ data, saving, onSave }: Props) {
           <div className="grid items-end gap-2 border-b border-line pb-2.5" style={{ gridTemplateColumns: cols }}>
             <span className="eyebrow self-end">KPI</span>
             {markets.map((m) => (
-              <div key={m.id} className="flex flex-col items-start gap-1">
+              <div key={m.id} className="flex flex-col items-center gap-1">
                 <Flag code={m.code} size={22} />
                 <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
               </div>
@@ -122,7 +122,7 @@ export function TargetEditor({ data, saving, onSave }: Props) {
                       step="any"
                       value={values[k] ?? ''}
                       onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                      className="tnum h-9 w-full rounded-lg border border-line bg-surface px-3 text-left text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                      className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     />
                   )
                 })}

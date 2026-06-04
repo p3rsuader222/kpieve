@@ -7,10 +7,10 @@ export function Shell({ children }: { children: ReactNode }) {
       <Sidebar />
       <TopBar />
       <div className="flex min-h-dvh flex-col">
-        <main className="mx-auto w-full max-w-[1360px] flex-1 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+        <main className="w-full max-w-[1360px] flex-1 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
           {children}
         </main>
-        <footer className="mx-auto w-full max-w-[1360px] px-4 py-5 sm:px-6 lg:px-8">
+        <footer className="w-full max-w-[1360px] px-4 py-5 sm:px-6 lg:px-8">
           <p className="border-t border-line pt-4 text-2xs text-ink-muted">
             KPIeve · Onboarding performance dashboard
           </p>

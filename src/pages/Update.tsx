@@ -178,7 +178,7 @@ export function Update() {
                   const t = periodTarget(data, activeKpi.id, m.id, period)
                   const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
                   return (
-                    <div key={m.id} className="flex flex-col items-start gap-1">
+                    <div key={m.id} className="flex flex-col items-center gap-1">
                       <Flag code={m.code} size={26} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
                       <span className="tnum text-2xs leading-tight text-ink-muted/80">
@@ -220,7 +220,7 @@ export function Update() {
                           step="any"
                           value={values[k] ?? ''}
                           onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                          className="tnum h-11 w-full rounded-lg border border-line bg-surface px-3 text-left text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                          className="tnum h-11 w-full rounded-lg border border-line bg-surface px-2 text-center text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                         />
                       )
                     })}
