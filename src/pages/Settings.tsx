@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { ArrowDown, ArrowUp, Database, Pencil, Plus, Trash2 } from 'lucide-react'
 import { activeKpis } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
@@ -127,6 +128,18 @@ export function Settings() {
     }
   }
 
+  async function deleteTargets(period: string) {
+    if (!guard()) return
+    const label = format(new Date(period), 'MMMM yyyy')
+    if (!window.confirm(`Delete all per-country targets for ${label}? This cannot be undone.`)) return
+    try {
+      await m.deleteTargets.mutateAsync(period)
+      toast.success(`Cleared targets for ${label}.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete targets.')
+    }
+  }
+
   async function removeMember(mem: Member) {
     if (!guard()) return
     if (!window.confirm(`Remove ${mem.name}? Their entries will be deleted.`)) return
@@ -159,7 +172,13 @@ export function Settings() {
       {/* Targets (editor) + Markets (reference) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-2" eyebrow="Per country · per month" title="Targets">
-          <TargetEditor data={data} saving={m.upsertTargets.isPending} onSave={saveTargets} />
+          <TargetEditor
+            data={data}
+            saving={m.upsertTargets.isPending}
+            deleting={m.deleteTargets.isPending}
+            onSave={saveTargets}
+            onDelete={deleteTargets}
+          />
         </Panel>
         <Panel eyebrow="Reference" title="Markets">
           <div className="flex flex-wrap gap-2">

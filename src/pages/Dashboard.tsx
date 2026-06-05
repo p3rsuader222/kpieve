@@ -69,7 +69,10 @@ export function Dashboard() {
   const hasData = snaps.some((s) => s.value != null)
 
   return (
-    <div className="space-y-4">
+    // On large screens the dashboard fills exactly the viewport (minus the app
+    // chrome) and the trend chart flexes to fill the leftover — so everything
+    // fits on one screen with no page scroll.
+    <div className="flex flex-col gap-4 xl:h-[calc(100dvh-8rem)] xl:overflow-hidden">
       {/* Sticky header — faded country flag fills the bar when one is selected */}
       <div className="sticky top-0 z-20 -mx-4 overflow-hidden border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {selectedCountry && (
@@ -122,15 +125,15 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-12">
         {/* LEFT column — matrix · detail · trend, joined */}
-        <div className="card divide-y divide-line xl:col-span-8">
-          <section className="p-4">
+        <div className="card divide-y divide-line xl:col-span-8 xl:flex xl:flex-col xl:overflow-hidden">
+          <section className="p-4 xl:shrink-0">
             <SectionHead eyebrow="Country × KPI" title="Targets & progress by country" />
             <CountryMatrix data={data} period={activePeriod} selected={selectedMarket} onSelect={setSelectedMarket} />
           </section>
 
-          <section className="p-4">
+          <section className="p-4 xl:shrink-0">
             <SectionHead
               eyebrow="Monthly detail · click to focus a KPI"
               title={
@@ -169,7 +172,7 @@ export function Dashboard() {
             </div>
           </section>
 
-          <section className="p-4">
+          <section className="p-4 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
             <SectionHead
               eyebrow={`${scopeLabel} · ${selectedKpi.name}`}
               title="Trend over time"
@@ -180,7 +183,7 @@ export function Dashboard() {
                 </>
               }
             />
-            <div className="h-[clamp(260px,40vh,460px)]">
+            <div className="h-[280px] xl:h-auto xl:min-h-0 xl:flex-1">
               <TrendChart
                 data={data}
                 kpi={selectedKpi}
@@ -194,8 +197,8 @@ export function Dashboard() {
         </div>
 
         {/* RIGHT column — summary · leaderboard · coverage, joined */}
-        <div className="card flex flex-col divide-y divide-line xl:col-span-4">
-          <section className="p-4">
+        <div className="card flex flex-col divide-y divide-line xl:col-span-4 xl:min-h-0 xl:overflow-hidden">
+          <section className="p-4 xl:shrink-0">
             <SummaryBar
               snaps={snaps}
               period={activePeriod}
@@ -204,7 +207,7 @@ export function Dashboard() {
             />
           </section>
 
-          <section className="p-4">
+          <section className="p-4 xl:shrink-0">
             <SectionHead eyebrow="Ranking" title="Team leaderboard" />
             <MemberLeaderboard data={data} period={activePeriod} highlightMarket={selectedMarket} />
           </section>

@@ -147,6 +147,13 @@ export async function saveTarget(row: TargetUpsert): Promise<void> {
   return upsertTargets([row])
 }
 
+/** Delete every per-country target for a given month (yyyy-MM-01). */
+export async function deleteTargetsForPeriod(period: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('targets').delete().eq('period', period)
+  if (error) throw error
+}
+
 export interface ForecastUpsert {
   kpi_id: string
   market_id: string

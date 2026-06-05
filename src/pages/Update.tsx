@@ -111,7 +111,7 @@ export function Update() {
     }
   }
 
-  const cols = `minmax(180px, 1.6fr) repeat(${markets.length}, minmax(116px, 1fr))`
+  const cols = `minmax(150px, 1.4fr) repeat(${markets.length}, minmax(78px, 116px))`
 
   return (
     <div className="space-y-6">
@@ -210,7 +210,7 @@ export function Update() {
           <div className="overflow-x-auto">
             <div className="min-w-[560px] overflow-hidden rounded-xl border border-line">
               <div
-                className="grid items-end gap-3 border-b border-line bg-surface-2/50 px-4 py-3.5"
+                className="grid items-end gap-2.5 border-b border-line bg-surface-2/50 px-4 py-3"
                 style={{ gridTemplateColumns: cols }}
               >
                 <span className="eyebrow self-end">Member</span>
@@ -219,7 +219,7 @@ export function Update() {
                   const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
                   return (
                     <div key={m.id} className="flex flex-col items-center gap-1">
-                      <Flag code={m.code} size={26} />
+                      <Flag code={m.code} size={22} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
                       <span className="tnum text-2xs leading-tight text-ink-muted/80">
                         tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
@@ -235,19 +235,19 @@ export function Update() {
                 {members.map((member) => (
                   <div
                     key={member.id}
-                    className="grid items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2/30"
+                    className="grid items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-surface-2/30"
                     style={{ gridTemplateColumns: cols }}
                   >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="md" />
-                      <span className="truncate text-base font-medium text-ink">{member.name}</span>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Avatar initials={member.initials} color={member.color} avatar={member.avatar} size="sm" />
+                      <span className="truncate text-sm font-medium text-ink">{member.name}</span>
                     </div>
                     {markets.map((market) => {
                       const covered = member.marketIds.includes(market.id)
                       const k = keyOf(activeKpi.id, member.id, market.id)
                       if (!covered) {
                         return (
-                          <div key={market.id} className="grid h-11 place-items-center rounded-lg border border-dashed border-line text-ink-muted/40">
+                          <div key={market.id} className="grid h-9 place-items-center rounded-lg border border-dashed border-line text-ink-muted/40">
                             ·
                           </div>
                         )
@@ -260,7 +260,7 @@ export function Update() {
                           step="any"
                           value={values[k] ?? ''}
                           onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
-                          className="tnum h-11 w-full rounded-lg border border-line bg-surface px-2 text-center text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                          className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                         />
                       )
                     })}

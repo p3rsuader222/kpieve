@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   deleteKpi,
   deleteMember,
+  deleteTargetsForPeriod,
   saveKpi,
   saveMember,
   upsertForecasts,
@@ -26,6 +27,7 @@ export function useConfigMutations() {
     }),
     deleteMember: useMutation({ mutationFn: (id: string) => deleteMember(id), onSuccess: invalidate }),
     upsertTargets: useMutation({ mutationFn: (rows: TargetUpsert[]) => upsertTargets(rows), onSuccess: invalidate }),
+    deleteTargets: useMutation({ mutationFn: (period: string) => deleteTargetsForPeriod(period), onSuccess: invalidate }),
     upsertForecasts: useMutation({ mutationFn: (rows: ForecastUpsert[]) => upsertForecasts(rows), onSuccess: invalidate }),
   }
 }

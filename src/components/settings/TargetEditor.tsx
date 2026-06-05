@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarRange, Save } from 'lucide-react'
+import { CalendarRange, Save, Trash2 } from 'lucide-react'
 import { activeKpis, periodTarget } from '@/lib/metrics'
 import type { DashboardData } from '@/lib/types'
 import type { TargetUpsert } from '@/data/datasource'
@@ -10,13 +10,15 @@ import { Flag } from '@/components/ui/Flag'
 interface Props {
   data: DashboardData
   saving: boolean
+  deleting: boolean
   onSave: (rows: TargetUpsert[]) => void
+  onDelete: (period: string) => void
 }
 
 const keyOf = (kpiId: string, marketId: string) => `${kpiId}:${marketId}`
 
 /** A KPI × country grid of editable monthly targets. */
-export function TargetEditor({ data, saving, onSave }: Props) {
+export function TargetEditor({ data, saving, deleting, onSave, onDelete }: Props) {
   const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const period = `${month}-01`
   const [values, setValues] = useState<Record<string, string>>({})
@@ -79,6 +81,16 @@ export function TargetEditor({ data, saving, onSave }: Props) {
           />
         </label>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onDelete(period)}
+            disabled={deleting || saving}
+            title={`Delete all targets for ${format(new Date(period), 'MMMM yyyy')}`}
+            className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad disabled:pointer-events-none disabled:opacity-50"
+          >
+            <Trash2 size={16} />
+            {deleting ? 'Deleting…' : 'Delete month'}
+          </button>
           <Button
             variant="secondary"
             size="md"
