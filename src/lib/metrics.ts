@@ -621,6 +621,8 @@ export function memberMaxBonus(data: DashboardData, memberId: string): number {
 export interface MemberBonusKpi {
   kpi: Kpi
   weight: number // percent 0..100
+  value: number | null // the member's fact for the month
+  target: number | null // the member's target
   attainment: number | null
   cappedAttainment: number | null // min(attainment, BONUS_CAP)
   /** True when attainment ≥ the 80% threshold (so this KPI pays). */
@@ -660,7 +662,7 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
       // Below the 80% threshold the KPI pays nothing; otherwise scale by attainment (capped).
       const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
       finalBonus += bonus
-      return { kpi, weight, attainment: att, cappedAttainment, met, portion, bonus }
+      return { kpi, weight, value, target, attainment: att, cappedAttainment, met, portion, bonus }
     })
     return { member, maxBonus, weightSum, kpis: rows, finalBonus }
   })
