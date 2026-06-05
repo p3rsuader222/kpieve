@@ -125,7 +125,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-12 xl:[grid-template-rows:minmax(0,1fr)]">
         {/* LEFT column — matrix · detail · trend, joined */}
         <div className="card divide-y divide-line xl:col-span-8 xl:flex xl:flex-col xl:overflow-hidden">
           <section className="p-4 xl:shrink-0">
@@ -183,15 +183,19 @@ export function Dashboard() {
                 </>
               }
             />
-            <div className="h-[280px] xl:h-auto xl:min-h-0 xl:flex-1">
-              <TrendChart
-                data={data}
-                kpi={selectedKpi}
-                splitBy={splitBy}
-                granularity={granularity}
-                period={activePeriod}
-                marketId={selectedMarket}
-              />
+            {/* relative + absolute inset gives Recharts' ResponsiveContainer a
+                concrete box to measure, so it fills the flex-sized section. */}
+            <div className="relative max-xl:h-[280px] xl:min-h-0 xl:flex-1">
+              <div className="absolute inset-0">
+                <TrendChart
+                  data={data}
+                  kpi={selectedKpi}
+                  splitBy={splitBy}
+                  granularity={granularity}
+                  period={activePeriod}
+                  marketId={selectedMarket}
+                />
+              </div>
             </div>
           </section>
         </div>

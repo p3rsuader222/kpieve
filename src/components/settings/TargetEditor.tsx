@@ -80,10 +80,8 @@ export function TargetEditor({ data, saving, deleting, onSave, onDelete }: Props
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Month</span>
-          <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
             <button
               type="button"
               onClick={() => setMonth(shiftMonth(month, -1))}
@@ -107,30 +105,29 @@ export function TargetEditor({ data, saving, deleting, onSave, onDelete }: Props
               <ChevronRight size={17} strokeWidth={2.2} />
             </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onDelete(period)}
             disabled={deleting || saving}
             title={`Delete all targets for ${format(new Date(period), 'MMMM yyyy')}`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad disabled:pointer-events-none disabled:opacity-50"
           >
-            <Trash2 size={16} />
-            {deleting ? 'Deleting…' : 'Delete month'}
+            <Trash2 size={14} />
+            {deleting ? 'Deleting…' : 'Delete'}
           </button>
           <Button
             variant="secondary"
-            size="md"
+            size="sm"
             onClick={() => onSave(rowsForPeriods(monthsToDec))}
             disabled={saving}
             title={`Apply this grid to every month from ${format(new Date(period), 'MMM')} through December ${year}`}
           >
-            <CalendarRange size={16} />
+            <CalendarRange size={14} />
             Fill to Dec {year}
           </Button>
-          <Button variant="primary" size="md" onClick={() => onSave(rows)} disabled={saving}>
-            <Save size={16} />
+          <Button variant="primary" size="sm" onClick={() => onSave(rows)} disabled={saving}>
+            <Save size={14} />
             {saving ? 'Saving…' : 'Save month'}
           </Button>
         </div>

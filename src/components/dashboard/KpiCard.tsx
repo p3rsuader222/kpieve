@@ -15,9 +15,9 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
   const DeltaIcon = delta == null || delta === 0 ? Minus : delta > 0 ? ArrowUpRight : ArrowDownRight
 
   return (
-    <article className="card group relative flex flex-col gap-2 p-3 transition-shadow duration-300 hover:shadow-card-hover">
+    <article className="card group relative flex flex-col gap-1.5 p-3 transition-shadow duration-300 hover:shadow-card-hover">
       <header className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-ink" title={kpi.name}>
+        <h3 className="truncate text-xs font-semibold text-ink" title={kpi.name}>
           {kpi.name}
         </h3>
         <p className="mt-1 flex items-center justify-between gap-2">
@@ -38,7 +38,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
           <AnimatedNumber
             value={value}
             format={(n) => formatValue(n, kpi)}
-            className="tnum block truncate font-display text-[2rem] font-semibold leading-none tracking-tight text-ink"
+            className="tnum block truncate font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink"
           />
           {delta != null && (
             <span
@@ -57,12 +57,12 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
           )}
         </div>
         <div className="shrink-0">
-          <ProgressRing progress={attainment ?? 0} status={status} size={68} stroke={7} label={ringLabel} empty={noData} />
+          <ProgressRing progress={attainment ?? 0} status={status} size={54} stroke={6} label={ringLabel} empty={noData} />
         </div>
       </div>
 
       <div className="mt-auto">
-        <Sparkline data={spark} status={status} height={26} />
+        <Sparkline data={spark} status={status} height={22} />
       </div>
     </article>
   )
