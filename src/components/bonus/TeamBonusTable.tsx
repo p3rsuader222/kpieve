@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { activeKpis, activeMembers, teamBonus, BONUS_CAP } from '@/lib/metrics'
+import { activeKpis, activeMembers, teamBonus, BONUS_CAP, BONUS_THRESHOLD } from '@/lib/metrics'
 import { formatPercent, formatValue } from '@/lib/format'
 import type { DashboardData } from '@/lib/types'
 import type { BonusSettingUpsert, BonusWeightUpsert } from '@/data/datasource'
@@ -70,7 +70,8 @@ export function TeamBonusTable({ data, period, saving, onSave }: Props) {
     let total = 0
     for (const k of kpis) {
       const att = attMap[memberId]?.[k.id]
-      if (att == null) continue
+      // Below the 80% threshold the KPI contributes nothing.
+      if (att == null || att < BONUS_THRESHOLD) continue
       total += ((max * num(weights[wKey(memberId, k.id)])) / 100) * att
     }
     return total
@@ -122,6 +123,7 @@ export function TeamBonusTable({ data, period, saving, onSave }: Props) {
                   {kpis.map((k) => {
                     const att = attMap[m.id]?.[k.id]
                     const capped = att != null && att >= BONUS_CAP
+                    const below = att != null && att < BONUS_THRESHOLD
                     return (
                       <div key={k.id} className="flex flex-col items-center gap-0.5">
                         <input
@@ -133,9 +135,15 @@ export function TeamBonusTable({ data, period, saving, onSave }: Props) {
                           onChange={(e) => setWeights((v) => ({ ...v, [wKey(m.id, k.id)]: e.target.value }))}
                           className={inputCls}
                         />
-                        <span className={cn('text-2xs', capped ? 'font-semibold text-good' : 'text-ink-muted')}>
+                        <span
+                          className={cn(
+                            'text-2xs',
+                            below ? 'font-semibold text-bad' : capped ? 'font-semibold text-good' : 'text-ink-muted',
+                          )}
+                          title={below ? 'Below the 80% threshold — pays €0' : undefined}
+                        >
                           {att != null ? formatPercent(att) : '—'}
-                          {capped ? ' cap' : ''}
+                          {capped ? ' cap' : below ? ' ✗' : ''}
                         </span>
                       </div>
                     )
@@ -174,8 +182,9 @@ export function TeamBonusTable({ data, period, saving, onSave }: Props) {
 
       <div className="mt-3 flex items-center justify-between gap-3">
         <p className="text-2xs text-ink-muted">
-          Final = max × Σ(weight × attainment), each KPI capped at {Math.round(BONUS_CAP * 100)}%. The % under each weight
-          is that member's attainment for the month.
+          Final = max × Σ(weight × attainment) for KPIs at or above{' '}
+          {Math.round(BONUS_THRESHOLD * 100)}%; a KPI below that pays €0 (✗). Each KPI is capped at{' '}
+          {Math.round(BONUS_CAP * 100)}%. The % under each weight is that member's attainment for the month.
         </p>
         <Button variant="primary" size="sm" onClick={save} disabled={saving}>
           <Save size={15} />

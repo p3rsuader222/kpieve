@@ -607,6 +607,8 @@ export function countryMatrix(data: DashboardData, period: string): MatrixRow[] 
 
 /** Per-KPI attainment is capped at this multiple when computing bonus. */
 export const BONUS_CAP = 1.5
+/** A KPI must reach at least this attainment to pay any bonus (else €0 for it). */
+export const BONUS_THRESHOLD = 0.8
 
 export function bonusWeightOf(data: DashboardData, memberId: string, kpiId: string): number {
   return data.bonusWeights.find((b) => b.member_id === memberId && b.kpi_id === kpiId)?.weight ?? 0
@@ -621,8 +623,10 @@ export interface MemberBonusKpi {
   weight: number // percent 0..100
   attainment: number | null
   cappedAttainment: number | null // min(attainment, BONUS_CAP)
+  /** True when attainment ≥ the 80% threshold (so this KPI pays). */
+  met: boolean
   portion: number // maxBonus * weight/100 — the payout at 100% attainment
-  bonus: number // portion * cappedAttainment (0 when unscored)
+  bonus: number // portion * cappedAttainment when met, else 0
 }
 
 export interface MemberBonus {
@@ -651,10 +655,12 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
       const target = memberTargetForPeriod(data, kpi, member, period)
       const att = attainment(value, target, kpi.direction)
       const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
+      const met = att != null && att >= BONUS_THRESHOLD
       const portion = (maxBonus * weight) / 100
-      const bonus = cappedAttainment == null ? 0 : portion * cappedAttainment
+      // Below the 80% threshold the KPI pays nothing; otherwise scale by attainment (capped).
+      const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
       finalBonus += bonus
-      return { kpi, weight, attainment: att, cappedAttainment, portion, bonus }
+      return { kpi, weight, attainment: att, cappedAttainment, met, portion, bonus }
     })
     return { member, maxBonus, weightSum, kpis: rows, finalBonus }
   })

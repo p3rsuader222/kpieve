@@ -7,19 +7,14 @@ import { Button } from '@/components/ui/Button'
 // Note: this is a soft client-side gate to keep casual viewers out — not a
 // substitute for real per-user access control.
 const BONUS_PASSWORD = import.meta.env.VITE_BONUS_PASSWORD || 'bonus'
-const UNLOCK_KEY = 'kpieve-bonus-unlocked'
 
-function readUnlocked(): boolean {
-  try {
-    return sessionStorage.getItem(UNLOCK_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-/** Gates its children behind a separate bonus password (remembered per session). */
+/**
+ * Gates its children behind a separate bonus password. The unlock lives only in
+ * component state (no persistence), so leaving the page re-locks it — returning
+ * always re-prompts for the password.
+ */
 export function BonusGate({ children }: { children: ReactNode }) {
-  const [unlocked, setUnlocked] = useState(readUnlocked)
+  const [unlocked, setUnlocked] = useState(false)
   const [pw, setPw] = useState('')
   const [error, setError] = useState(false)
 
@@ -28,11 +23,6 @@ export function BonusGate({ children }: { children: ReactNode }) {
   function submit(e: FormEvent) {
     e.preventDefault()
     if (pw === BONUS_PASSWORD) {
-      try {
-        sessionStorage.setItem(UNLOCK_KEY, '1')
-      } catch {
-        /* ignore */
-      }
       setUnlocked(true)
     } else {
       setError(true)

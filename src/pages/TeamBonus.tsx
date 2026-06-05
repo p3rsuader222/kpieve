@@ -75,7 +75,8 @@ function TeamBonusInner() {
       <p className="max-w-3xl text-sm text-ink-muted">
         Set each member's <strong className="font-semibold text-ink-soft">max bonus</strong> and the{' '}
         <strong className="font-semibold text-ink-soft">weight</strong> (%) of that bonus tied to each KPI. The final
-        bonus scales each KPI's share by the member's attainment for {monthLabel}, capped at 150% per KPI.
+        bonus scales each KPI's share by the member's attainment for {monthLabel}, capped at 150% per KPI. A KPI must
+        reach at least <strong className="font-semibold text-ink-soft">80%</strong> to count — below that it pays €0.
       </p>
 
       <TeamBonusTable data={data} period={bonusPeriod} saving={saving} onSave={save} />
