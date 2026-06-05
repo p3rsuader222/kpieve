@@ -66,17 +66,19 @@ function TeamBonusInner() {
         <div className="flex items-center gap-3 rounded-xl border border-line bg-brand-soft/60 px-4 py-3 text-sm text-ink-soft">
           <Database size={17} className="shrink-0 text-brand" />
           <span>
-            <strong className="font-semibold text-ink">Demo mode.</strong> You can edit weights and max bonuses to
-            preview the payout, but saving needs Supabase connected.
+            <strong className="font-semibold text-ink">Demo mode.</strong> You can try the plan and preview payouts, but
+            saving needs Supabase connected.
           </span>
         </div>
       )}
 
       <p className="max-w-3xl text-sm text-ink-muted">
-        Set each member's <strong className="font-semibold text-ink-soft">max bonus</strong> and the{' '}
-        <strong className="font-semibold text-ink-soft">weight</strong> (%) of that bonus tied to each KPI. The final
-        bonus scales each KPI's share by the member's attainment for {monthLabel}, capped at 150% per KPI. A KPI must
-        reach at least <strong className="font-semibold text-ink-soft">80%</strong> to count — below that it pays €0.
+        See how everyone's bonus is shaping up for{' '}
+        <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Each KPI starts paying once a person
+        reaches <strong className="font-semibold text-ink-soft">80%</strong>, up to{' '}
+        <strong className="font-semibold text-ink-soft">150%</strong> for beating the target. Switch to{' '}
+        <strong className="font-semibold text-ink-soft">Weights</strong> to set each person's bonus pot and how it's
+        split across KPIs.
       </p>
 
       <TeamBonusTable data={data} period={bonusPeriod} saving={saving} onSave={save} />

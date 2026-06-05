@@ -1,63 +1,103 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Lock } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/cn'
 
-// Separate, page-specific password. Set VITE_BONUS_PASSWORD in your env
-// (e.g. Netlify) for production; defaults to "bonus" for local/demo.
-// Note: this is a soft client-side gate to keep casual viewers out — not a
-// substitute for real per-user access control.
+// Separate, page-specific code. Set VITE_BONUS_PASSWORD in your env (e.g. Netlify)
+// for production — a short PIN works best with this entry style; defaults to
+// "bonus" for local/demo. Soft client-side gate, not real access control.
 const BONUS_PASSWORD = import.meta.env.VITE_BONUS_PASSWORD || 'bonus'
+const LEN = BONUS_PASSWORD.length
+const NUMERIC = /^\d+$/.test(BONUS_PASSWORD)
 
 /**
- * Gates its children behind a separate bonus password. The unlock lives only in
- * component state (no persistence), so leaving the page re-locks it — returning
- * always re-prompts for the password.
+ * PIN-style gate: one box per character, auto-advancing. When the full code is
+ * entered correctly it unlocks immediately (no confirm button). The unlock lives
+ * only in component state, so leaving the page re-locks it — returning re-prompts.
  */
 export function BonusGate({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState(false)
-  const [pw, setPw] = useState('')
+  const [digits, setDigits] = useState<string[]>(() => Array(LEN).fill(''))
   const [error, setError] = useState(false)
+  const refs = useRef<Array<HTMLInputElement | null>>([])
 
   if (unlocked) return <>{children}</>
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    if (pw === BONUS_PASSWORD) {
+  function attempt(next: string[]) {
+    if (!next.every((d) => d !== '')) return
+    if (next.join('') === BONUS_PASSWORD) {
       setUnlocked(true)
     } else {
       setError(true)
+      setTimeout(() => {
+        setDigits(Array(LEN).fill(''))
+        setError(false)
+        refs.current[0]?.focus()
+      }, 450)
     }
   }
 
+  function setAt(i: number, val: string) {
+    const ch = val.slice(-1)
+    const next = [...digits]
+    next[i] = ch
+    setDigits(next)
+    setError(false)
+    if (ch && i < LEN - 1) refs.current[i + 1]?.focus()
+    attempt(next)
+  }
+
+  function onKeyDown(i: number, e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) refs.current[i - 1]?.focus()
+  }
+
+  function onPaste(e: ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text').trim().slice(0, LEN)
+    if (!text) return
+    const next = Array.from({ length: LEN }, (_, i) => text[i] ?? '')
+    setDigits(next)
+    refs.current[Math.min(text.length, LEN - 1)]?.focus()
+    attempt(next)
+  }
+
   return (
-    <div className="grid min-h-[60vh] place-items-center">
-      <form onSubmit={submit} className="card w-full max-w-sm p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-soft">
-            <Lock size={20} className="text-brand" />
+    <div className="grid min-h-[70vh] place-items-center px-4">
+      <div className={cn('card w-full max-w-sm p-6 shadow-pop', error && 'animate-shake')}>
+        <div className="mb-5 flex flex-col items-center text-center">
+          <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft">
+            <Lock size={22} className="text-brand" />
           </span>
-          <div>
-            <h2 className="font-display text-lg font-semibold leading-tight text-ink">Team Bonus</h2>
-            <p className="text-sm text-ink-muted">Enter the bonus password to continue.</p>
-          </div>
+          <h2 className="font-display text-lg font-semibold leading-tight text-ink">Team Bonus</h2>
+          <p className="mt-1 text-sm text-ink-muted">Enter the access code to continue.</p>
         </div>
-        <input
-          type="password"
-          autoFocus
-          value={pw}
-          onChange={(e) => {
-            setPw(e.target.value)
-            setError(false)
-          }}
-          placeholder="Password"
-          aria-label="Bonus password"
-          className="mb-2 h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        {error && <p className="mb-2 text-xs font-medium text-bad">Incorrect password.</p>}
-        <Button variant="primary" size="md" type="submit" className="w-full">
-          Unlock
-        </Button>
-      </form>
+
+        <div className="flex justify-center gap-2" onPaste={onPaste}>
+          {digits.map((d, i) => (
+            <input
+              key={i}
+              ref={(el) => {
+                refs.current[i] = el
+              }}
+              value={d}
+              onChange={(e) => setAt(i, e.target.value)}
+              onKeyDown={(e) => onKeyDown(i, e)}
+              inputMode={NUMERIC ? 'numeric' : 'text'}
+              autoComplete="off"
+              maxLength={1}
+              autoFocus={i === 0}
+              aria-label={`Code character ${i + 1}`}
+              className={cn(
+                'h-12 w-10 rounded-xl border bg-surface text-center font-display text-xl font-semibold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-brand/40',
+                error ? 'border-bad text-bad' : 'border-line-strong focus:border-brand',
+              )}
+            />
+          ))}
+        </div>
+
+        <p className={cn('mt-3 text-center text-xs font-medium', error ? 'text-bad' : 'text-transparent')}>
+          Wrong code — try again.
+        </p>
+      </div>
     </div>
   )
 }

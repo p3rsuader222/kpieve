@@ -59,11 +59,11 @@ export function Forecast() {
       <p className="flex max-w-2xl items-start gap-2 text-sm text-ink-muted">
         <Info size={16} className="mt-0.5 shrink-0 text-brand" />
         <span>
-          How many sellers you're likely to fully onboard in{' '}
-          <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. A market's potential = the sellers who
-          reached their <strong className="font-semibold text-ink-soft">1st active offer</strong> last month — they
-          usually finalize about a month later. The <strong className="font-semibold text-ink-soft">3-month average</strong>{' '}
-          is a prediction from recent history.
+          How many sellers you're likely to finish onboarding in{' '}
+          <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Each country's number is last month's{' '}
+          <strong className="font-semibold text-ink-soft">1st active offer</strong> sellers — they usually wrap up about a
+          month later. <strong className="font-semibold text-ink-soft">3-mo avg</strong> is a rough guess from recent
+          months.
         </span>
       </p>
 
