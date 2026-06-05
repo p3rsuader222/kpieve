@@ -600,3 +600,101 @@ export function countryMatrix(data: DashboardData, period: string): MatrixRow[] 
 
   return [...markets.map(build), build(null)]
 }
+
+// ============================================================
+//  Forecast engine (next-month projection)
+// ============================================================
+
+/** A saved manual projection for (kpi, market, month); null when unset (no default fallback). */
+export function savedForecast(
+  data: DashboardData,
+  kpiId: string,
+  marketId: string,
+  period: string,
+): number | null {
+  const row = data.forecasts.find(
+    (f) => f.kpi_id === kpiId && f.market_id === marketId && f.period === period,
+  )
+  return row ? row.value : null
+}
+
+/**
+ * The most recent `n` *completed* months strictly before `period` — i.e. months
+ * whose end has already passed (`today`). The in-progress current month and any
+ * future months between today and the forecast month are skipped, so a baseline
+ * computed from these isn't dragged down by a half-finished month.
+ */
+export function completedMonthsBefore(period: string, n: number, today: Date = new Date()): string[] {
+  const todayStr = format(today, 'yyyy-MM-dd')
+  const out: string[] = []
+  let p = prevPeriod(period)
+  let guard = 0
+  while (out.length < n && guard < 60) {
+    if (monthEnd(p) < todayStr) out.push(p)
+    p = prevPeriod(p)
+    guard++
+  }
+  return out
+}
+
+/**
+ * Mean FACT across the last `n` completed months before `period` (the suggested
+ * forecast baseline). Months with no data are skipped; returns null when none of
+ * the lookback months have data.
+ */
+export function avgLastNFact(
+  data: DashboardData,
+  kpi: Kpi,
+  period: string,
+  n: number,
+  scope: PeriodScope = {},
+): number | null {
+  const vals = completedMonthsBefore(period, n)
+    .map((p) => periodFact(data, kpi, p, scope))
+    .filter((v): v is number => v != null)
+  if (vals.length === 0) return null
+  return vals.reduce((s, v) => s + v, 0) / vals.length
+}
+
+export interface ForecastRow {
+  /** null marks the TOTAL row. */
+  market: Market | null
+  id: string
+  code: string
+  name: string
+  /** Average fact over the last 3 completed months — the suggested baseline. */
+  avg3: number | null
+  /** Fact for the most recent completed month before the forecast month. */
+  prevActual: number | null
+  /** Saved manual projection for this row, if any (null on the TOTAL row). */
+  savedProjection: number | null
+  /** Target for the forecast month (falls back to default_target). */
+  target: number | null
+}
+
+/** Lookback window for the average-baseline suggestion. */
+export const FORECAST_LOOKBACK = 3
+
+/** Per-country (+ TOTAL) baseline rows for forecasting `kpi` in month `period`. */
+export function forecastRows(data: DashboardData, kpi: Kpi, period: string): ForecastRow[] {
+  const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
+  const months = completedMonthsBefore(period, FORECAST_LOOKBACK)
+  const lastCompleted = months[0] ?? null
+
+  const build = (market: Market | null): ForecastRow => {
+    const scope: PeriodScope = market ? { marketId: market.id } : {}
+    const facts = months.map((p) => periodFact(data, kpi, p, scope)).filter((v): v is number => v != null)
+    return {
+      market,
+      id: market?.id ?? 'total',
+      code: market?.code ?? 'ALL',
+      name: market?.name ?? 'Total',
+      avg3: facts.length ? facts.reduce((s, v) => s + v, 0) / facts.length : null,
+      prevActual: lastCompleted ? periodFact(data, kpi, lastCompleted, scope) : null,
+      savedProjection: market ? savedForecast(data, kpi.id, market.id, period) : null,
+      target: market ? periodTarget(data, kpi.id, market.id, period) : totalTarget(data, kpi, period),
+    }
+  }
+
+  return [...markets.map(build), build(null)]
+}

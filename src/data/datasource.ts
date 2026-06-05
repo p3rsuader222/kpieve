@@ -1,5 +1,5 @@
 import { format, subDays } from 'date-fns'
-import type { DashboardData, Entry, Kpi, Market, Member, Target } from '@/lib/types'
+import type { DashboardData, Entry, Forecast, Kpi, Market, Member, Target } from '@/lib/types'
 import { buildMockData } from '@/lib/mock'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
 
@@ -28,7 +28,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
 
   const cutoff = format(subDays(new Date(), HISTORY_DAYS), 'yyyy-MM-dd')
 
-  const [markets, members, memberMarkets, kpis, entries, targets] = await Promise.all([
+  const [markets, members, memberMarkets, kpis, entries, targets, forecasts] = await Promise.all([
     supabase.from('markets').select('id, code, name, sort_order').order('sort_order'),
     supabase.from('members').select('id, name, initials, color, active, sort_order, avatar').order('sort_order'),
     supabase.from('member_markets').select('member_id, market_id'),
@@ -38,10 +38,12 @@ export async function fetchDashboard(): Promise<DashboardData> {
       .select('id, kpi_id, member_id, market_id, date, value, target, note, source')
       .gte('date', cutoff),
     supabase.from('targets').select('kpi_id, market_id, period, value').gte('period', cutoff),
+    supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
   ])
 
   const err =
-    markets.error || members.error || memberMarkets.error || kpis.error || entries.error || targets.error
+    markets.error || members.error || memberMarkets.error || kpis.error || entries.error || targets.error ||
+    forecasts.error
   if (err) throw err
 
   const coverage = new Map<string, string[]>()
@@ -64,6 +66,9 @@ export async function fetchDashboard(): Promise<DashboardData> {
     ),
     targets: (targets.data ?? []).map(
       (t): Target => ({ ...t, value: Number(t.value) }),
+    ),
+    forecasts: (forecasts.data ?? []).map(
+      (f): Forecast => ({ ...f, value: Number(f.value) }),
     ),
   }
 }
@@ -140,6 +145,26 @@ export async function upsertTargets(rows: TargetUpsert[]): Promise<void> {
 
 export async function saveTarget(row: TargetUpsert): Promise<void> {
   return upsertTargets([row])
+}
+
+export interface ForecastUpsert {
+  kpi_id: string
+  market_id: string
+  period: string // month start yyyy-MM-01 (the month being forecast)
+  value: number
+}
+
+export async function upsertForecasts(rows: ForecastUpsert[]): Promise<void> {
+  if (rows.length === 0) return
+  const client = requireClient()
+  const { error } = await client
+    .from('forecasts')
+    .upsert(rows, { onConflict: 'kpi_id,market_id,period' })
+  if (error) throw error
+}
+
+export async function saveForecast(row: ForecastUpsert): Promise<void> {
+  return upsertForecasts([row])
 }
 
 export type KpiInput = Omit<Kpi, 'id'>

@@ -66,6 +66,18 @@ export interface Target {
   value: number
 }
 
+/**
+ * A user-typed projection for next month, per (kpi, market, month).
+ * Structurally identical to a Target, but semantically a forecast: `period` is the
+ * month being forecast and `value` is the projected fact for that country.
+ */
+export interface Forecast {
+  kpi_id: string
+  market_id: string
+  period: string // month start, yyyy-MM-01
+  value: number
+}
+
 /** Convenience bundle of everything the dashboard needs in one shot. */
 export interface DashboardData {
   markets: Market[]
@@ -73,6 +85,7 @@ export interface DashboardData {
   kpis: Kpi[]
   entries: Entry[]
   targets: Target[]
+  forecasts: Forecast[]
 }
 
 export type TimeRange = 'today' | 'week' | 'month'

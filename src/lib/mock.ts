@@ -1,5 +1,5 @@
 import { format, startOfMonth, subMonths } from 'date-fns'
-import type { DashboardData, Entry, Kpi, Market, Member, Target } from './types'
+import type { DashboardData, Entry, Forecast, Kpi, Market, Member, Target } from './types'
 
 /** Deterministic PRNG so generated trends are stable between renders. */
 function mulberry32(seed: number) {
@@ -166,5 +166,15 @@ export function buildMockData(): DashboardData {
     }
   }
 
-  return { markets: MARKETS, members: MEMBERS, kpis: KPIS, entries, targets }
+  // A few saved next-month projections for the headline KPI, so the Forecast page
+  // demonstrates manual numbers diverging from the 3-month-average suggestion.
+  const nextMonth = format(subMonths(thisMonth, -1), 'yyyy-MM-dd')
+  const forecasts: Forecast[] = [
+    { kpi_id: 'kpi-active-offer', market_id: 'mk-lt', period: nextMonth, value: 17 },
+    { kpi_id: 'kpi-active-offer', market_id: 'mk-lv', period: nextMonth, value: 13 },
+    { kpi_id: 'kpi-active-offer', market_id: 'mk-ee', period: nextMonth, value: 11 },
+    { kpi_id: 'kpi-active-offer', market_id: 'mk-pl', period: nextMonth, value: 12 },
+  ]
+
+  return { markets: MARKETS, members: MEMBERS, kpis: KPIS, entries, targets, forecasts }
 }

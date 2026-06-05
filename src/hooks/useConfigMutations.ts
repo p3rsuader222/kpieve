@@ -4,7 +4,9 @@ import {
   deleteMember,
   saveKpi,
   saveMember,
+  upsertForecasts,
   upsertTargets,
+  type ForecastUpsert,
   type TargetUpsert,
 } from '@/data/datasource'
 import type { Kpi, Member } from '@/lib/types'
@@ -24,5 +26,6 @@ export function useConfigMutations() {
     }),
     deleteMember: useMutation({ mutationFn: (id: string) => deleteMember(id), onSuccess: invalidate }),
     upsertTargets: useMutation({ mutationFn: (rows: TargetUpsert[]) => upsertTargets(rows), onSuccess: invalidate }),
+    upsertForecasts: useMutation({ mutationFn: (rows: ForecastUpsert[]) => upsertForecasts(rows), onSuccess: invalidate }),
   }
 }

@@ -77,6 +77,19 @@ create table if not exists public.targets (
 
 create index if not exists targets_period_idx on public.targets(period);
 
+-- Per-country, per-month forecasts: a manual projection of next month's fact.
+-- Same shape as targets; `period` is the month being forecast.
+create table if not exists public.forecasts (
+  id         uuid primary key default gen_random_uuid(),
+  kpi_id     uuid not null references public.kpis(id)    on delete cascade,
+  market_id  uuid not null references public.markets(id) on delete cascade,
+  period     date not null,                 -- month start, yyyy-MM-01
+  value      numeric not null,
+  constraint forecasts_uniq unique (kpi_id, market_id, period)
+);
+
+create index if not exists forecasts_period_idx on public.forecasts(period);
+
 -- Keep updated_at fresh on edits.
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -99,11 +112,12 @@ alter table public.member_markets enable row level security;
 alter table public.kpis           enable row level security;
 alter table public.entries        enable row level security;
 alter table public.targets        enable row level security;
+alter table public.forecasts      enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['markets','members','member_markets','kpis','entries','targets'] loop
+  foreach t in array array['markets','members','member_markets','kpis','entries','targets','forecasts'] loop
     execute format('drop policy if exists "authenticated full access" on public.%I;', t);
     execute format(
       'create policy "authenticated full access" on public.%I for all to authenticated using (true) with check (true);',

@@ -5,6 +5,7 @@ import { Shell } from '@/components/layout/Shell'
 import { Logo } from '@/components/layout/Logo'
 import { Dashboard } from '@/pages/Dashboard'
 import { Update } from '@/pages/Update'
+import { Forecast } from '@/pages/Forecast'
 import { Settings } from '@/pages/Settings'
 import { Login } from '@/pages/Login'
 
@@ -40,6 +41,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/update" element={<Update />} />
+                <Route path="/forecast" element={<Forecast />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
