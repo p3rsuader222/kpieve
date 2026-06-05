@@ -602,6 +602,65 @@ export function countryMatrix(data: DashboardData, period: string): MatrixRow[] 
 }
 
 // ============================================================
+//  Team bonus
+// ============================================================
+
+/** Per-KPI attainment is capped at this multiple when computing bonus. */
+export const BONUS_CAP = 1.5
+
+export function bonusWeightOf(data: DashboardData, memberId: string, kpiId: string): number {
+  return data.bonusWeights.find((b) => b.member_id === memberId && b.kpi_id === kpiId)?.weight ?? 0
+}
+
+export function memberMaxBonus(data: DashboardData, memberId: string): number {
+  return data.bonusSettings.find((b) => b.member_id === memberId)?.max_bonus ?? 0
+}
+
+export interface MemberBonusKpi {
+  kpi: Kpi
+  weight: number // percent 0..100
+  attainment: number | null
+  cappedAttainment: number | null // min(attainment, BONUS_CAP)
+  portion: number // maxBonus * weight/100 — the payout at 100% attainment
+  bonus: number // portion * cappedAttainment (0 when unscored)
+}
+
+export interface MemberBonus {
+  member: Member
+  maxBonus: number
+  weightSum: number // sum of weights (percent) — should be 100
+  kpis: MemberBonusKpi[]
+  finalBonus: number
+}
+
+/**
+ * Each member's bonus for `period`: every KPI's portion (max × weight) scales
+ * with that member's attainment, capped at 150% per KPI. Unscored KPIs (no data
+ * or no target) contribute 0.
+ */
+export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
+  const kpis = activeKpis(data)
+  return activeMembers(data).map((member) => {
+    const maxBonus = memberMaxBonus(data, member.id)
+    let weightSum = 0
+    let finalBonus = 0
+    const rows = kpis.map((kpi) => {
+      const weight = bonusWeightOf(data, member.id, kpi.id)
+      weightSum += weight
+      const value = periodFact(data, kpi, period, { memberId: member.id })
+      const target = memberTargetForPeriod(data, kpi, member, period)
+      const att = attainment(value, target, kpi.direction)
+      const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
+      const portion = (maxBonus * weight) / 100
+      const bonus = cappedAttainment == null ? 0 : portion * cappedAttainment
+      finalBonus += bonus
+      return { kpi, weight, attainment: att, cappedAttainment, portion, bonus }
+    })
+    return { member, maxBonus, weightSum, kpis: rows, finalBonus }
+  })
+}
+
+// ============================================================
 //  Forecast engine (next-month projection)
 // ============================================================
 

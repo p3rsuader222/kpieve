@@ -1,5 +1,15 @@
 import { format, subDays } from 'date-fns'
-import type { DashboardData, Entry, Forecast, Kpi, Market, Member, Target } from '@/lib/types'
+import type {
+  BonusSetting,
+  BonusWeight,
+  DashboardData,
+  Entry,
+  Forecast,
+  Kpi,
+  Market,
+  Member,
+  Target,
+} from '@/lib/types'
 import { buildMockData } from '@/lib/mock'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
 
@@ -28,7 +38,8 @@ export async function fetchDashboard(): Promise<DashboardData> {
 
   const cutoff = format(subDays(new Date(), HISTORY_DAYS), 'yyyy-MM-dd')
 
-  const [markets, members, memberMarkets, kpis, entries, targets, forecasts] = await Promise.all([
+  const [markets, members, memberMarkets, kpis, entries, targets, forecasts, bonusWeights, bonusSettings] =
+    await Promise.all([
     supabase.from('markets').select('id, code, name, sort_order').order('sort_order'),
     supabase.from('members').select('id, name, initials, color, active, sort_order, avatar').order('sort_order'),
     supabase.from('member_markets').select('member_id, market_id'),
@@ -39,11 +50,13 @@ export async function fetchDashboard(): Promise<DashboardData> {
       .gte('date', cutoff),
     supabase.from('targets').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
+    supabase.from('bonus_weights').select('member_id, kpi_id, weight'),
+    supabase.from('bonus_settings').select('member_id, max_bonus'),
   ])
 
   const err =
     markets.error || members.error || memberMarkets.error || kpis.error || entries.error || targets.error ||
-    forecasts.error
+    forecasts.error || bonusWeights.error || bonusSettings.error
   if (err) throw err
 
   const coverage = new Map<string, string[]>()
@@ -69,6 +82,12 @@ export async function fetchDashboard(): Promise<DashboardData> {
     ),
     forecasts: (forecasts.data ?? []).map(
       (f): Forecast => ({ ...f, value: Number(f.value) }),
+    ),
+    bonusWeights: (bonusWeights.data ?? []).map(
+      (b): BonusWeight => ({ ...b, weight: Number(b.weight) }),
+    ),
+    bonusSettings: (bonusSettings.data ?? []).map(
+      (b): BonusSetting => ({ ...b, max_bonus: Number(b.max_bonus) }),
     ),
   }
 }
@@ -172,6 +191,31 @@ export async function upsertForecasts(rows: ForecastUpsert[]): Promise<void> {
 
 export async function saveForecast(row: ForecastUpsert): Promise<void> {
   return upsertForecasts([row])
+}
+
+export interface BonusWeightUpsert {
+  member_id: string
+  kpi_id: string
+  weight: number
+}
+
+export async function upsertBonusWeights(rows: BonusWeightUpsert[]): Promise<void> {
+  if (rows.length === 0) return
+  const client = requireClient()
+  const { error } = await client.from('bonus_weights').upsert(rows, { onConflict: 'member_id,kpi_id' })
+  if (error) throw error
+}
+
+export interface BonusSettingUpsert {
+  member_id: string
+  max_bonus: number
+}
+
+export async function upsertBonusSettings(rows: BonusSettingUpsert[]): Promise<void> {
+  if (rows.length === 0) return
+  const client = requireClient()
+  const { error } = await client.from('bonus_settings').upsert(rows, { onConflict: 'member_id' })
+  if (error) throw error
 }
 
 export type KpiInput = Omit<Kpi, 'id'>

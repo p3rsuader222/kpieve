@@ -1,5 +1,5 @@
 import { format, startOfMonth, subMonths } from 'date-fns'
-import type { DashboardData, Entry, Forecast, Kpi, Market, Member, Target } from './types'
+import type { BonusSetting, BonusWeight, DashboardData, Entry, Forecast, Kpi, Market, Member, Target } from './types'
 
 /** Deterministic PRNG so generated trends are stable between renders. */
 function mulberry32(seed: number) {
@@ -176,5 +176,22 @@ export function buildMockData(): DashboardData {
     { kpi_id: 'kpi-active-offer', market_id: 'mk-pl', period: nextMonth, value: 12 },
   ]
 
-  return { markets: MARKETS, members: MEMBERS, kpis: KPIS, entries, targets, forecasts }
+  // Example bonus plan: per-member KPI weights (percent, summing to 100) + max bonus.
+  const WEIGHTS: Record<string, number> = {
+    'kpi-active-offer': 40,
+    'kpi-first-order': 25,
+    'kpi-phh': 15,
+    'kpi-late-rate': 10,
+    'kpi-fbp': 10,
+  }
+  const MAX_BONUS: Record<string, number> = { 'mem-1': 1000, 'mem-2': 900, 'mem-3': 1100, 'mem-4': 950 }
+  const bonusWeights: BonusWeight[] = []
+  for (const m of MEMBERS) {
+    for (const kpi of KPIS) {
+      bonusWeights.push({ member_id: m.id, kpi_id: kpi.id, weight: WEIGHTS[kpi.id] ?? 0 })
+    }
+  }
+  const bonusSettings: BonusSetting[] = MEMBERS.map((m) => ({ member_id: m.id, max_bonus: MAX_BONUS[m.id] ?? 1000 }))
+
+  return { markets: MARKETS, members: MEMBERS, kpis: KPIS, entries, targets, forecasts, bonusWeights, bonusSettings }
 }

@@ -6,6 +6,7 @@ import { Logo } from '@/components/layout/Logo'
 import { Dashboard } from '@/pages/Dashboard'
 import { Update } from '@/pages/Update'
 import { Forecast } from '@/pages/Forecast'
+import { TeamBonus } from '@/pages/TeamBonus'
 import { Settings } from '@/pages/Settings'
 import { Login } from '@/pages/Login'
 
@@ -42,6 +43,7 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/update" element={<Update />} />
                 <Route path="/forecast" element={<Forecast />} />
+                <Route path="/team-bonus" element={<TeamBonus />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

@@ -90,6 +90,21 @@ create table if not exists public.forecasts (
 
 create index if not exists forecasts_period_idx on public.forecasts(period);
 
+-- Per-member bonus weights (share of the max bonus tied to each KPI; percent 0..100).
+create table if not exists public.bonus_weights (
+  id         uuid primary key default gen_random_uuid(),
+  member_id  uuid not null references public.members(id) on delete cascade,
+  kpi_id     uuid not null references public.kpis(id)     on delete cascade,
+  weight     numeric not null default 0,   -- percent, 0..100
+  constraint bonus_weights_uniq unique (member_id, kpi_id)
+);
+
+-- Per-member maximum bonus (payout at 100% attainment across all KPIs).
+create table if not exists public.bonus_settings (
+  member_id  uuid primary key references public.members(id) on delete cascade,
+  max_bonus  numeric not null default 0
+);
+
 -- Keep updated_at fresh on edits.
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -113,11 +128,13 @@ alter table public.kpis           enable row level security;
 alter table public.entries        enable row level security;
 alter table public.targets        enable row level security;
 alter table public.forecasts      enable row level security;
+alter table public.bonus_weights  enable row level security;
+alter table public.bonus_settings enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['markets','members','member_markets','kpis','entries','targets','forecasts'] loop
+  foreach t in array array['markets','members','member_markets','kpis','entries','targets','forecasts','bonus_weights','bonus_settings'] loop
     execute format('drop policy if exists "authenticated full access" on public.%I;', t);
     execute format(
       'create policy "authenticated full access" on public.%I for all to authenticated using (true) with check (true);',

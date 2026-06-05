@@ -1,4 +1,4 @@
-import { CalendarClock, LayoutDashboard, LogOut, Moon, PencilLine, Settings, Sun } from 'lucide-react'
+import { CalendarClock, Coins, LayoutDashboard, LogOut, Moon, PencilLine, Settings, Sun } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import { useTheme } from '@/hooks/useTheme'
@@ -9,6 +9,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/update', label: 'Update', icon: PencilLine, end: false },
   { to: '/forecast', label: 'Forecast', icon: CalendarClock, end: false },
+  { to: '/team-bonus', label: 'Team Bonus', icon: Coins, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ]
 

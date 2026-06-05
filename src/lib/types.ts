@@ -78,6 +78,22 @@ export interface Forecast {
   value: number
 }
 
+/**
+ * Bonus weight: the share of a member's max bonus tied to one KPI.
+ * `weight` is a percentage (0–100). One row per (member, kpi).
+ */
+export interface BonusWeight {
+  member_id: string
+  kpi_id: string
+  weight: number // percent, 0..100
+}
+
+/** Per-member maximum bonus (the payout at 100% attainment across all KPIs). */
+export interface BonusSetting {
+  member_id: string
+  max_bonus: number
+}
+
 /** Convenience bundle of everything the dashboard needs in one shot. */
 export interface DashboardData {
   markets: Market[]
@@ -86,6 +102,8 @@ export interface DashboardData {
   entries: Entry[]
   targets: Target[]
   forecasts: Forecast[]
+  bonusWeights: BonusWeight[]
+  bonusSettings: BonusSetting[]
 }
 
 export type TimeRange = 'today' | 'week' | 'month'

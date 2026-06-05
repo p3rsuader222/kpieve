@@ -5,8 +5,12 @@ import {
   deleteTargetsForPeriod,
   saveKpi,
   saveMember,
+  upsertBonusSettings,
+  upsertBonusWeights,
   upsertForecasts,
   upsertTargets,
+  type BonusSettingUpsert,
+  type BonusWeightUpsert,
   type ForecastUpsert,
   type TargetUpsert,
 } from '@/data/datasource'
@@ -29,5 +33,7 @@ export function useConfigMutations() {
     upsertTargets: useMutation({ mutationFn: (rows: TargetUpsert[]) => upsertTargets(rows), onSuccess: invalidate }),
     deleteTargets: useMutation({ mutationFn: (period: string) => deleteTargetsForPeriod(period), onSuccess: invalidate }),
     upsertForecasts: useMutation({ mutationFn: (rows: ForecastUpsert[]) => upsertForecasts(rows), onSuccess: invalidate }),
+    upsertBonusWeights: useMutation({ mutationFn: (rows: BonusWeightUpsert[]) => upsertBonusWeights(rows), onSuccess: invalidate }),
+    upsertBonusSettings: useMutation({ mutationFn: (rows: BonusSettingUpsert[]) => upsertBonusSettings(rows), onSuccess: invalidate }),
   }
 }
