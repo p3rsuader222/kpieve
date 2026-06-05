@@ -122,7 +122,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12">
         {/* LEFT column — matrix · detail · trend, joined */}
         <div className="card divide-y divide-line xl:col-span-8">
           <section className="p-4">
@@ -180,19 +180,21 @@ export function Dashboard() {
                 </>
               }
             />
-            <TrendChart
-              data={data}
-              kpi={selectedKpi}
-              splitBy={splitBy}
-              granularity={granularity}
-              period={activePeriod}
-              marketId={selectedMarket}
-            />
+            <div className="h-[clamp(260px,40vh,460px)]">
+              <TrendChart
+                data={data}
+                kpi={selectedKpi}
+                splitBy={splitBy}
+                granularity={granularity}
+                period={activePeriod}
+                marketId={selectedMarket}
+              />
+            </div>
           </section>
         </div>
 
         {/* RIGHT column — summary · leaderboard · coverage, joined */}
-        <div className="card divide-y divide-line xl:col-span-4">
+        <div className="card flex flex-col divide-y divide-line xl:col-span-4">
           <section className="p-4">
             <SummaryBar
               snaps={snaps}
@@ -207,9 +209,11 @@ export function Dashboard() {
             <MemberLeaderboard data={data} period={activePeriod} highlightMarket={selectedMarket} />
           </section>
 
-          <section className="p-4">
+          <section className="flex flex-1 flex-col p-4">
             <SectionHead eyebrow="Coverage · all KPIs" title="Member × market" />
-            <AdherenceHeatmap data={data} period={activePeriod} highlightMarket={selectedMarket} />
+            <div className="flex flex-1 flex-col justify-center">
+              <AdherenceHeatmap data={data} period={activePeriod} highlightMarket={selectedMarket} />
+            </div>
           </section>
         </div>
       </div>

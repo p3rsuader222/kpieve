@@ -15,7 +15,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
   const DeltaIcon = delta == null || delta === 0 ? Minus : delta > 0 ? ArrowUpRight : ArrowDownRight
 
   return (
-    <article className="card group relative flex flex-col gap-3 p-4 transition-shadow duration-300 hover:shadow-card-hover">
+    <article className="card group relative flex flex-col gap-2 p-3 transition-shadow duration-300 hover:shadow-card-hover">
       <header className="min-w-0">
         <h3 className="truncate text-sm font-semibold text-ink" title={kpi.name}>
           {kpi.name}
@@ -43,7 +43,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
           {delta != null && (
             <span
               className={cn(
-                'mt-2 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-2xs font-semibold',
+                'mt-1.5 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-2xs font-semibold',
                 delta === 0
                   ? 'bg-surface-2 text-ink-muted'
                   : deltaGood
@@ -62,7 +62,7 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
       </div>
 
       <div className="mt-auto">
-        <Sparkline data={spark} status={status} height={32} />
+        <Sparkline data={spark} status={status} height={26} />
       </div>
     </article>
   )

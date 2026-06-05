@@ -88,7 +88,7 @@ export function TrendChart({ data, kpi, splitBy, granularity, period, marketId }
 
   if (rows.length < 2) {
     return (
-      <div className="grid h-[230px] place-items-center text-sm text-ink-muted">
+      <div className="grid h-full min-h-[230px] place-items-center text-sm text-ink-muted">
         Not enough {granularity === 'month' ? 'monthly' : granularity === 'week' ? 'weekly' : 'daily'} data yet.
       </div>
     )
@@ -97,7 +97,7 @@ export function TrendChart({ data, kpi, splitBy, granularity, period, marketId }
   const minTickGap = granularity === 'day' ? 24 : granularity === 'week' ? 8 : 12
 
   return (
-    <ResponsiveContainer width="100%" height={236}>
+    <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
         <defs>
           {series.map((s) => (
