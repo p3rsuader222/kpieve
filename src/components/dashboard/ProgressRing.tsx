@@ -1,6 +1,9 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/cn'
 import { STATUS_VAR, type Status } from '@/lib/status'
+
+// Apple-style deceleration: a long, soft ease-out (matches the `smooth` token).
+const EASE_SMOOTH = [0.22, 1, 0.36, 1] as const
 
 interface Props {
   /** 0..1 (values >1 are clamped for the arc but can be shown in the label). */
@@ -15,6 +18,7 @@ interface Props {
 }
 
 export function ProgressRing({ progress, status, size = 132, stroke = 11, label, sublabel, empty = false }: Props) {
+  const reduce = useReducedMotion()
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const clamped = Math.max(0, Math.min(1, progress))
@@ -45,9 +49,10 @@ export function ProgressRing({ progress, status, size = 132, stroke = 11, label,
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={c}
-            initial={false}
+            // Fill in from empty on first paint, then ease smoothly between values.
+            initial={reduce ? false : { strokeDashoffset: c }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ type: 'spring', duration: 0.7, bounce: 0 }}
+            transition={reduce ? { duration: 0 } : { duration: 1.4, ease: EASE_SMOOTH }}
           />
         )}
       </svg>

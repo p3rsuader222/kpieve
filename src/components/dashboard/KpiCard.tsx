@@ -34,11 +34,11 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
       </header>
 
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <AnimatedNumber
             value={value}
             format={(n) => formatValue(n, kpi)}
-            className="tnum block font-display text-[2rem] font-semibold leading-none tracking-tight text-ink"
+            className="tnum block truncate font-display text-[2rem] font-semibold leading-none tracking-tight text-ink"
           />
           {delta != null && (
             <span
@@ -56,7 +56,9 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
             </span>
           )}
         </div>
-        <ProgressRing progress={attainment ?? 0} status={status} size={68} stroke={7} label={ringLabel} empty={noData} />
+        <div className="shrink-0">
+          <ProgressRing progress={attainment ?? 0} status={status} size={68} stroke={7} label={ringLabel} empty={noData} />
+        </div>
       </div>
 
       <div className="mt-auto">

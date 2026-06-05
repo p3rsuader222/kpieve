@@ -140,7 +140,7 @@ export function Dashboard() {
                 </>
               }
             />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-5">
               {snaps.map((snap) => {
                 const selected = snap.kpi.id === selectedKpi.id
                 return (

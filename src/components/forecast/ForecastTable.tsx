@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RotateCcw, Save } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { forecastRows, type ForecastRow } from '@/lib/metrics'
 import { formatCompact, formatValue } from '@/lib/format'
-import { statusOf } from '@/lib/status'
+import { STATUS_LABEL, statusOf, type Status } from '@/lib/status'
 import type { DashboardData, Kpi } from '@/lib/types'
 import type { ForecastUpsert } from '@/data/datasource'
 import { Button } from '@/components/ui/Button'
 import { Flag } from '@/components/ui/Flag'
-import { StatusBadge } from '@/components/ui/Status'
+import { StatusBadge, StatusDot } from '@/components/ui/Status'
 
 interface Props {
   data: DashboardData
@@ -43,8 +44,14 @@ function rollUp(nums: number[], kpi: Kpi): number | null {
   return kpi.aggregation === 'sum' ? total : total / nums.length
 }
 
-// Country | 3-mo avg | Last month | Projection | Target | Status
-const COLS = 'minmax(132px,1fr) 76px 88px 96px 84px 118px'
+/** Hover label for a status dot — "none" here means no projection entered yet. */
+function statusTitle(s: Status): string {
+  return s === 'none' ? 'No projection yet' : STATUS_LABEL[s]
+}
+
+// Country | 3-mo avg | Last month | Projection | Target | Status — fully fluid (no scroll).
+const COLS = 'minmax(50px,1.1fr) minmax(0,0.8fr) minmax(0,0.8fr) 70px minmax(0,0.7fr) 22px'
+const headerCls = 'text-2xs font-semibold uppercase tracking-wide'
 
 /** One editable forecast card for a single KPI: per-country projections + TOTAL. */
 export function ForecastTable({ data, kpi, period, saving, onSave }: Props) {
@@ -97,73 +104,74 @@ export function ForecastTable({ data, kpi, period, saving, onSave }: Props) {
             target {formatValue(totalRow.target, kpi)}
           </p>
         </div>
-        <StatusBadge status={totalStatus} />
+        {liveTotal == null ? (
+          <span className="chip shrink-0">Add a projection</span>
+        ) : (
+          <StatusBadge status={totalStatus} className="shrink-0" />
+        )}
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[560px]">
-          {/* Header */}
-          <div
-            className="grid items-end gap-2 border-b border-line pb-2 text-center"
-            style={{ gridTemplateColumns: COLS }}
-          >
-            <span className="eyebrow justify-self-start self-end">Country</span>
-            <span className="eyebrow">3-mo avg</span>
-            <span className="eyebrow">Last month</span>
-            <span className="eyebrow text-brand-ink">Projection</span>
-            <span className="eyebrow">Target</span>
-            <span className="eyebrow justify-self-end self-end">Status</span>
-          </div>
+      <div>
+        {/* Header */}
+        <div
+          className="grid items-end gap-2 border-b border-line pb-2 text-center"
+          style={{ gridTemplateColumns: COLS }}
+        >
+          <span className={cn(headerCls, 'justify-self-start self-end text-ink-muted')}>Country</span>
+          <span className={cn(headerCls, 'text-ink-muted')}>Avg 3mo</span>
+          <span className={cn(headerCls, 'text-ink-muted')}>Last mo</span>
+          <span className={cn(headerCls, 'text-brand-ink')}>Plan</span>
+          <span className={cn(headerCls, 'text-ink-muted')}>Target</span>
+          <span className="sr-only">Status</span>
+        </div>
 
-          {/* Country rows */}
-          <div className="divide-y divide-line">
-            {marketRows.map((r) => {
-              const status = statusOf(parse(values[r.id]), r.target, kpi.direction)
-              return (
-                <div
-                  key={r.id}
-                  className="grid items-center gap-2 py-2 text-center"
-                  style={{ gridTemplateColumns: COLS }}
-                >
-                  <span className="flex items-center gap-2 justify-self-start">
-                    <Flag code={r.code} size={20} />
-                    <span className="text-sm font-medium text-ink">{r.code}</span>
-                    <span className="hidden truncate text-2xs text-ink-muted sm:inline">{r.name}</span>
-                  </span>
-                  <span className="tnum text-sm text-ink-soft">{formatCompact(r.avg3, kpi.format)}</span>
-                  <span className="tnum text-sm text-ink-soft">{formatCompact(r.prevActual, kpi.format)}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    aria-label={`${kpi.name} projection for ${r.name}`}
-                    value={values[r.id] ?? ''}
-                    onChange={(e) => setValues((v) => ({ ...v, [r.id]: e.target.value }))}
-                    className="tnum h-9 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                  />
-                  <span className="tnum text-sm text-ink-soft">{formatCompact(r.target, kpi.format)}</span>
-                  <span className="justify-self-end">
-                    <StatusBadge status={status} />
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+        {/* Country rows */}
+        <div className="divide-y divide-line">
+          {marketRows.map((r) => {
+            const status = statusOf(parse(values[r.id]), r.target, kpi.direction)
+            return (
+              <div
+                key={r.id}
+                className="grid items-center gap-2 py-2 text-center"
+                style={{ gridTemplateColumns: COLS }}
+              >
+                <span className="flex min-w-0 items-center gap-1.5 justify-self-start">
+                  <Flag code={r.code} size={18} />
+                  <span className="text-sm font-medium text-ink">{r.code}</span>
+                </span>
+                <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(r.avg3, kpi.format)}</span>
+                <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(r.prevActual, kpi.format)}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  aria-label={`${kpi.name} projection for ${r.name}`}
+                  value={values[r.id] ?? ''}
+                  onChange={(e) => setValues((v) => ({ ...v, [r.id]: e.target.value }))}
+                  className="tnum h-9 w-full rounded-lg border border-line bg-surface px-1 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                />
+                <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(r.target, kpi.format)}</span>
+                <span className="justify-self-center" title={statusTitle(status)}>
+                  <StatusDot status={status} />
+                </span>
+              </div>
+            )
+          })}
+        </div>
 
-          {/* TOTAL row */}
-          <div
-            className="grid items-center gap-2 border-t-2 border-line-strong pt-2.5 text-center"
-            style={{ gridTemplateColumns: COLS }}
-          >
-            <span className="justify-self-start text-sm font-semibold text-ink">Total</span>
-            <span className="tnum text-sm text-ink-soft">{formatCompact(totalRow.avg3, kpi.format)}</span>
-            <span className="tnum text-sm text-ink-soft">{formatCompact(totalRow.prevActual, kpi.format)}</span>
-            <span className="tnum text-sm font-semibold text-ink">{formatCompact(liveTotal, kpi.format)}</span>
-            <span className="tnum text-sm text-ink-soft">{formatCompact(totalRow.target, kpi.format)}</span>
-            <span className="justify-self-end">
-              <StatusBadge status={totalStatus} />
-            </span>
-          </div>
+        {/* TOTAL row */}
+        <div
+          className="grid items-center gap-2 border-t-2 border-line-strong pt-2.5 text-center"
+          style={{ gridTemplateColumns: COLS }}
+        >
+          <span className="justify-self-start text-sm font-semibold text-ink">Total</span>
+          <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(totalRow.avg3, kpi.format)}</span>
+          <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(totalRow.prevActual, kpi.format)}</span>
+          <span className="tnum whitespace-nowrap text-sm font-semibold text-ink">{formatCompact(liveTotal, kpi.format)}</span>
+          <span className="tnum whitespace-nowrap text-sm text-ink-soft">{formatCompact(totalRow.target, kpi.format)}</span>
+          <span className="justify-self-center" title={statusTitle(totalStatus)}>
+            <StatusDot status={totalStatus} />
+          </span>
         </div>
       </div>
 

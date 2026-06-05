@@ -8,14 +8,15 @@ interface Props {
 }
 
 /**
- * Buttery count-up: a spring (no overshoot) drives a motion value that renders
- * without React re-renders, so switching scope eases smoothly from the current
- * number to the next instead of restarting/flickering.
+ * Buttery count-up: a slow, no-overshoot spring drives a motion value that
+ * renders without React re-renders. It counts up from 0 on first paint, then
+ * eases smoothly from the current number to the next when scope changes —
+ * never a snap.
  */
 export function AnimatedNumber({ value, format, className }: Props) {
   const reduce = useReducedMotion()
-  const mv = useMotionValue(value ?? 0)
-  const spring = useSpring(mv, { duration: 0.6, bounce: 0 })
+  const mv = useMotionValue(0)
+  const spring = useSpring(mv, { duration: 1.4, bounce: 0 })
   const text = useTransform(spring, (n) => format(n))
 
   useEffect(() => {
