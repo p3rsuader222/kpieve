@@ -69,10 +69,10 @@ export function Dashboard() {
   const hasData = snaps.some((s) => s.value != null)
 
   return (
-    // On large screens the dashboard fills exactly the viewport (minus the app
-    // chrome) and the trend chart flexes to fill the leftover — so everything
-    // fits on one screen with no page scroll.
-    <div className="flex flex-col gap-4 xl:h-[calc(100dvh-8rem)] xl:overflow-hidden">
+    // On large screens the dashboard flex-fills the space between the app header
+    // and footer (Shell's <main> is a flex column), and the trend chart flexes to
+    // fill the leftover — so everything fits on one screen, no scroll, no gap.
+    <div className="flex flex-col gap-4 xl:min-h-0 xl:flex-1 xl:overflow-hidden">
       {/* Sticky header — faded country flag fills the bar when one is selected */}
       <div className="sticky top-0 z-20 -mx-4 overflow-hidden border-b border-line bg-paper/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         {selectedCountry && (

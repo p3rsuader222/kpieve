@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarRange, Save, Trash2 } from 'lucide-react'
-import { activeKpis, periodTarget } from '@/lib/metrics'
+import { CalendarRange, ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
+import { activeKpis } from '@/lib/metrics'
 import type { DashboardData } from '@/lib/types'
 import type { TargetUpsert } from '@/data/datasource'
 import { Button } from '@/components/ui/Button'
 import { Flag } from '@/components/ui/Flag'
+
+/** Shift a `yyyy-MM` string by whole months. */
+function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number)
+  return format(new Date(y, m - 1 + delta, 1), 'yyyy-MM')
+}
 
 interface Props {
   data: DashboardData
@@ -26,13 +32,17 @@ export function TargetEditor({ data, saving, deleting, onSave, onDelete }: Props
   const kpis = activeKpis(data)
   const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
 
-  // Prefill from existing targets for the chosen month.
+  // Prefill from the actual saved target ROWS for the chosen month (not the KPI
+  // default fallback) — so after "Delete month" the grid shows empty, making the
+  // deletion visible instead of silently re-showing default targets.
   useEffect(() => {
     const next: Record<string, string> = {}
     for (const kpi of kpis) {
       for (const market of markets) {
-        const t = periodTarget(data, kpi.id, market.id, period)
-        next[keyOf(kpi.id, market.id)] = t != null ? String(t) : ''
+        const row = data.targets.find(
+          (t) => t.kpi_id === kpi.id && t.market_id === market.id && t.period === period,
+        )
+        next[keyOf(kpi.id, market.id)] = row ? String(row.value) : ''
       }
     }
     setValues(next)
@@ -71,15 +81,33 @@ export function TargetEditor({ data, saving, deleting, onSave, onDelete }: Props
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="block">
+        <div>
           <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Month</span>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          />
-        </label>
+          <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
+            <button
+              type="button"
+              onClick={() => setMonth(shiftMonth(month, -1))}
+              aria-label="Previous month"
+              className="grid h-8 w-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              <ChevronLeft size={17} strokeWidth={2.2} />
+            </button>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="tnum h-8 border-0 bg-transparent px-1 text-sm font-medium text-ink focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setMonth(shiftMonth(month, 1))}
+              aria-label="Next month"
+              className="grid h-8 w-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              <ChevronRight size={17} strokeWidth={2.2} />
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"

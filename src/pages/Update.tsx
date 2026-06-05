@@ -111,7 +111,9 @@ export function Update() {
     }
   }
 
-  const cols = `minmax(150px, 1.4fr) repeat(${markets.length}, minmax(78px, 116px))`
+  // Fixed widths so the table shrinks to its content and sits left-aligned
+  // (no full-width stretch with a big empty gap between names and inputs).
+  const cols = `190px repeat(${markets.length}, 96px)`
 
   return (
     <div className="space-y-6">
@@ -208,7 +210,7 @@ export function Update() {
 
           {/* Aligned table island */}
           <div className="overflow-x-auto">
-            <div className="min-w-[560px] overflow-hidden rounded-xl border border-line">
+            <div className="w-fit overflow-hidden rounded-xl border border-line">
               <div
                 className="grid items-end gap-2.5 border-b border-line bg-surface-2/50 px-4 py-3"
                 style={{ gridTemplateColumns: cols }}
