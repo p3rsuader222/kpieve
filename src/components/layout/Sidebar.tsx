@@ -1,9 +1,9 @@
-import { CalendarClock, Coins, LayoutDashboard, LogOut, Moon, PencilLine, Settings, Sun } from 'lucide-react'
+import { CalendarClock, Coins, LayoutDashboard, LogOut, PencilLine, Settings } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/cn'
-import { useTheme } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { Logo } from './Logo'
+import { ThemePicker } from './ThemePicker'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -19,23 +19,6 @@ function navClass(isActive: boolean) {
     isActive
       ? 'bg-brand-soft text-brand-ink'
       : 'text-ink-muted hover:bg-surface-2 hover:text-ink',
-  )
-}
-
-function ThemeButton({ compact = false }: { compact?: boolean }) {
-  const { theme, toggle } = useTheme()
-  return (
-    <button
-      onClick={toggle}
-      aria-label="Toggle theme"
-      className={cn(
-        'flex items-center gap-3 rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink',
-        compact ? 'h-9 w-9 justify-center' : 'w-full px-3 py-2 text-sm font-medium',
-      )}
-    >
-      {theme === 'dark' ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
-      {!compact && <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
-    </button>
   )
 }
 
@@ -90,7 +73,7 @@ export function Sidebar() {
         <div className="mb-2 px-3">
           <ModeBadge />
         </div>
-        <ThemeButton />
+        <ThemePicker />
         <SignOutButton />
       </div>
     </aside>
@@ -124,7 +107,7 @@ export function TopBar() {
             </NavLink>
           ))}
         </nav>
-        <ThemeButton compact />
+        <ThemePicker compact />
         <SignOutButton compact />
       </div>
     </header>

@@ -69,7 +69,7 @@ export function SummaryBar({ snaps, period, scopeCountry, onClearScope }: Props)
         />
         <div className="min-w-0">
           <p className="eyebrow">Team adherence</p>
-          <h2 className="mt-1 font-display text-base font-semibold leading-tight text-ink">
+          <h2 className="mt-1 font-heading text-base font-semibold leading-tight text-ink">
             {counts.good} of {scored.length} KPIs on target
           </h2>
           <p className="mt-0.5 text-2xs text-ink-muted">{format(parseISO(period), 'MMMM yyyy')}</p>

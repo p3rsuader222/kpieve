@@ -44,7 +44,7 @@ export function Login() {
               <LockKeyhole size={19} />
             </span>
             <div>
-              <h1 className="font-display text-lg font-semibold text-ink">Team dashboard</h1>
+              <h1 className="font-heading text-lg font-semibold text-ink">Team dashboard</h1>
               <p className="text-xs text-ink-muted">Enter the password to continue</p>
             </div>
           </div>

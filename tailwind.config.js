@@ -32,8 +32,12 @@ export default {
         'bad-soft': 'hsl(var(--bad-soft) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['"Clash Display"', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Driven by CSS variables so each theme can carry its own typography.
+        // `display` = crisp UI/number font (Clash); `heading` = large editorial
+        // titles (may be serif per theme); `sans` = body/UI font.
+        display: ['var(--font-display)'],
+        heading: ['var(--font-heading)'],
+        sans: ['var(--font-sans)'],
       },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.04em' }],

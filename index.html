@@ -4,18 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#F4F6F8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#14171C" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F4F6F8" />
     <meta name="description" content="KPIeve — Onboarding team KPI dashboard." />
     <title>KPIeve · Onboarding KPIs</title>
 
-    <!-- Set theme before paint to avoid flash. Defaults to LIGHT unless the
-         user has explicitly chosen dark before. -->
+    <!-- Set theme before paint to avoid flash. Defaults to LIGHT. Dark-family
+         themes also get the `.dark` class so the original dark tokens apply. -->
     <script>
       (function () {
         try {
-          var t = localStorage.getItem('kpieve-theme');
-          if (t === 'dark') document.documentElement.classList.add('dark');
+          var valid = ['light', 'dark', 'soft-gray', 'warm-charcoal', 'rose-mist', 'sage-mist', 'periwinkle'];
+          var colors = {
+            light: '#F4F6F8', dark: '#14171C', 'soft-gray': '#F3F4F6', 'warm-charcoal': '#2B2D31',
+            'rose-mist': '#F5D4D8', 'sage-mist': '#DCE6DE', periwinkle: '#D7D8F5',
+          };
+          var t = localStorage.getItem('kpieve-theme') || 'light';
+          if (valid.indexOf(t) === -1) t = 'light';
+          var el = document.documentElement;
+          el.setAttribute('data-theme', t);
+          if (t === 'dark' || t === 'warm-charcoal') el.classList.add('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta && colors[t]) meta.setAttribute('content', colors[t]);
         } catch (e) {}
       })();
     </script>
@@ -23,13 +32,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
-    <!-- Display: Clash Display (Fontshare) · Body + numerals: Manrope (Google) -->
+    <!-- Display/numerals: Clash Display (Fontshare). Body + editorial heading
+         fonts (Google): Manrope, Geist, Instrument Sans, Newsreader, Fraunces.
+         Themes pick from these via the --font-* CSS variables. -->
     <link
       href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap"
       rel="stylesheet"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Geist:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap"
       rel="stylesheet"
     />
   </head>

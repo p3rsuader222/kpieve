@@ -24,14 +24,14 @@ function read(): ThemeColors {
 
 /**
  * Resolved CSS-variable colors for use in SVG/Recharts attributes.
- * Re-reads whenever the `.dark` class on <html> changes, so charts recolor
- * instantly on theme toggle.
+ * Re-reads whenever the theme on <html> changes (`data-theme` attribute or
+ * the `.dark` class), so charts recolor instantly on theme switch.
  */
 export function useThemeColors(): ThemeColors {
   const [colors, setColors] = useState<ThemeColors>(read)
   useEffect(() => {
     const obs = new MutationObserver(() => setColors(read()))
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] })
     return () => obs.disconnect()
   }, [])
   return colors

@@ -35,7 +35,7 @@ export function ForecastTable({ data, kpi, period }: Props) {
     <div className="card p-4">
       <div className="mb-3">
         <p className="eyebrow mb-0.5">Potential onboards · {monthLabel}</p>
-        <h3 className="truncate font-display text-base font-semibold text-ink" title={kpi.name}>
+        <h3 className="truncate font-heading text-base font-semibold text-ink" title={kpi.name}>
           {kpi.name}
         </h3>
       </div>

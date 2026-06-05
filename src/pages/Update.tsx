@@ -120,7 +120,7 @@ export function Update() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Daily entry</p>
-          <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink">Update KPIs</h1>
+          <h1 className="mt-1.5 font-heading text-3xl font-semibold tracking-tight text-ink">Update KPIs</h1>
           <p className="mt-2 text-sm text-ink-muted">Log each member's numbers for the day — progress rolls up to the month.</p>
         </div>
         <div className="flex items-end gap-2.5">

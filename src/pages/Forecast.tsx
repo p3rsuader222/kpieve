@@ -45,7 +45,7 @@ export function Forecast() {
           </span>
           <div>
             <p className="eyebrow">Pipeline · onboarding outlook</p>
-            <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
+            <h1 className="mt-1 font-heading text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
               Forecast <span className="text-brand">· {monthLabel}</span>
             </h1>
           </div>

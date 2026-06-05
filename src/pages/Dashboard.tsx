@@ -35,7 +35,7 @@ function SectionHead({ eyebrow, title, actions }: { eyebrow: string; title: Reac
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="eyebrow mb-0.5">{eyebrow}</p>
-        <h2 className="flex items-center gap-2 font-display text-base font-semibold leading-tight text-ink">{title}</h2>
+        <h2 className="flex items-center gap-2 font-heading text-base font-semibold leading-tight text-ink">{title}</h2>
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
     </div>
@@ -94,7 +94,7 @@ export function Dashboard() {
             </span>
             <div>
               <p className="eyebrow">{selectedCountry ? 'Viewing country' : 'Onboarding team · LT · LV · EE · PL'}</p>
-              <h1 className="mt-1 font-display text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
+              <h1 className="mt-1 font-heading text-[1.6rem] font-semibold leading-none tracking-tight text-ink">
                 Onboarding KPIs
                 {selectedCountry && <span className="text-brand"> · {selectedCountry.name}</span>}
               </h1>

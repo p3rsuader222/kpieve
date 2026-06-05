@@ -67,7 +67,7 @@ export function BonusGate({ children }: { children: ReactNode }) {
           <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft">
             <Lock size={22} className="text-brand" />
           </span>
-          <h2 className="font-display text-lg font-semibold leading-tight text-ink">Team Bonus</h2>
+          <h2 className="font-heading text-lg font-semibold leading-tight text-ink">Team Bonus</h2>
           <p className="mt-1 text-sm text-ink-muted">Enter the access code to continue.</p>
         </div>
 

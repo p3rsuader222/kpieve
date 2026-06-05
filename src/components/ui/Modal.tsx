@@ -45,7 +45,7 @@ export function Modal({ open, onClose, title, description, children, footer }: P
           >
             <div className="flex items-start justify-between gap-4 border-b border-line p-5">
               <div>
-                <h2 className="font-display text-lg font-semibold text-ink">{title}</h2>
+                <h2 className="font-heading text-lg font-semibold text-ink">{title}</h2>
                 {description && <p className="mt-0.5 text-xs text-ink-muted">{description}</p>}
               </div>
               <button

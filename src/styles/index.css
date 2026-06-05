@@ -38,6 +38,11 @@
 
     --shadow: 213 30% 25%;
 
+    /* Typography (per-theme overridable). Light keeps the original pairing. */
+    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
     color-scheme: light;
   }
 
@@ -71,6 +76,194 @@
     --shadow: 0 0% 0%;
 
     color-scheme: dark;
+  }
+
+  /* ----------------------------------------------------------------
+     Premium ambient themes (added). Each is self-contained: it
+     redefines every token so it fully overrides the :root (light)
+     defaults it inherits on <html>. Light + dark above are untouched.
+     Numbers keep the crisp --font-display (Clash) across all themes;
+     only body (--font-sans) and large titles (--font-heading) vary.
+     ---------------------------------------------------------------- */
+
+  [data-theme='soft-gray'] {
+    --paper: 220 14% 96%;
+    --surface: 0 0% 100%;
+    --surface-2: 220 13% 91%;
+
+    --ink: 215 28% 17%;
+    --ink-soft: 215 14% 34%;
+    --ink-muted: 220 9% 46%;
+
+    --line: 216 12% 84%;
+    --line-strong: 216 12% 75%;
+
+    --brand: 213 100% 52%;
+    --brand-soft: 213 92% 88%;
+    --brand-ink: 213 92% 46%;
+    --brand-contrast: 0 0% 100%;
+
+    --accent: 213 100% 52%;
+    --accent-contrast: 0 0% 100%;
+
+    --good: 160 60% 49%;
+    --good-soft: 158 57% 93%;
+    --warn: 42 100% 46%;
+    --warn-soft: 42 85% 92%;
+    --bad: 352 61% 50%;
+    --bad-soft: 352 75% 94%;
+
+    --shadow: 220 22% 28%;
+
+    --font-sans: 'Geist', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+    color-scheme: light;
+  }
+
+  [data-theme='warm-charcoal'] {
+    --paper: 220 7% 18%;
+    --surface: 218 6% 24%;
+    --surface-2: 217 7% 22%;
+
+    --ink: 220 14% 96%;
+    --ink-soft: 216 12% 84%;
+    --ink-muted: 218 11% 65%;
+
+    --line: 218 7% 32%;
+    --line-strong: 218 7% 42%;
+
+    --brand: 212 100% 59%;
+    --brand-soft: 212 42% 24%;
+    --brand-ink: 212 100% 72%;
+    --brand-contrast: 0 0% 100%;
+
+    --accent: 212 100% 59%;
+    --accent-contrast: 0 0% 100%;
+
+    --good: 160 55% 55%;
+    --good-soft: 160 30% 18%;
+    --warn: 42 90% 58%;
+    --warn-soft: 42 40% 20%;
+    --bad: 352 65% 62%;
+    --bad-soft: 352 35% 24%;
+
+    --shadow: 0 0% 0%;
+
+    --font-sans: 'Instrument Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+    color-scheme: dark;
+  }
+
+  [data-theme='rose-mist'] {
+    --paper: 353 62% 90%;
+    --surface: 354 67% 94%;
+    --surface-2: 352 58% 85%;
+
+    --ink: 346 10% 26%;
+    --ink-soft: 337 9% 38%;
+    --ink-muted: 340 6% 51%;
+
+    --line: 350 40% 78%;
+    --line-strong: 350 40% 69%;
+
+    --brand: 351 59% 63%;
+    --brand-soft: 351 67% 88%;
+    --brand-ink: 351 59% 46%;
+    --brand-contrast: 0 0% 100%;
+
+    --accent: 351 59% 63%;
+    --accent-contrast: 0 0% 100%;
+
+    --good: 160 60% 49%;
+    --good-soft: 158 57% 93%;
+    --warn: 42 100% 46%;
+    --warn-soft: 42 85% 92%;
+    --bad: 352 61% 50%;
+    --bad-soft: 352 75% 94%;
+
+    --shadow: 353 22% 28%;
+
+    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+    color-scheme: light;
+  }
+
+  [data-theme='sage-mist'] {
+    --paper: 132 17% 88%;
+    --surface: 130 21% 95%;
+    --surface-2: 127 22% 85%;
+
+    --ink: 138 15% 23%;
+    --ink-soft: 133 11% 33%;
+    --ink-muted: 134 7% 46%;
+
+    --line: 123 15% 76%;
+    --line-strong: 123 15% 67%;
+
+    --brand: 129 21% 46%;
+    --brand-soft: 129 29% 88%;
+    --brand-ink: 129 21% 46%;
+    --brand-contrast: 0 0% 100%;
+
+    --accent: 129 21% 46%;
+    --accent-contrast: 0 0% 100%;
+
+    --good: 160 60% 49%;
+    --good-soft: 158 57% 93%;
+    --warn: 42 100% 46%;
+    --warn-soft: 42 85% 92%;
+    --bad: 352 61% 50%;
+    --bad-soft: 352 75% 94%;
+
+    --shadow: 132 22% 28%;
+
+    --font-sans: 'Instrument Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+    color-scheme: light;
+  }
+
+  [data-theme='periwinkle'] {
+    --paper: 238 60% 90%;
+    --surface: 237 69% 95%;
+    --surface-2: 237 54% 85%;
+
+    --ink: 231 26% 25%;
+    --ink-soft: 229 21% 40%;
+    --ink-muted: 230 17% 52%;
+
+    --line: 235 56% 80%;
+    --line-strong: 235 56% 71%;
+
+    --brand: 239 74% 63%;
+    --brand-soft: 239 82% 88%;
+    --brand-ink: 239 74% 46%;
+    --brand-contrast: 0 0% 100%;
+
+    --accent: 239 74% 63%;
+    --accent-contrast: 0 0% 100%;
+
+    --good: 160 60% 49%;
+    --good-soft: 158 57% 93%;
+    --warn: 42 100% 46%;
+    --warn-soft: 42 85% 92%;
+    --bad: 352 61% 50%;
+    --bad-soft: 352 75% 94%;
+
+    --shadow: 238 22% 28%;
+
+    --font-sans: 'Geist', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Clash Display', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+    color-scheme: light;
   }
 
   * {
