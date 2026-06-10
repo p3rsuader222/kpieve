@@ -731,7 +731,7 @@ export interface ForecastRow {
   name: string
   /** Average fact over the last 3 completed months — the suggested baseline. */
   avg3: number | null
-  /** Fact for the most recent completed month before the forecast month. */
+  /** Fact for the calendar month immediately preceding the forecast month (may be in progress). */
   prevActual: number | null
   /** Saved manual projection for this row, if any (null on the TOTAL row). */
   savedProjection: number | null
@@ -746,7 +746,7 @@ export const FORECAST_LOOKBACK = 3
 export function forecastRows(data: DashboardData, kpi: Kpi, period: string): ForecastRow[] {
   const markets = [...data.markets].sort((a, z) => a.sort_order - z.sort_order)
   const months = completedMonthsBefore(period, FORECAST_LOOKBACK)
-  const lastCompleted = months[0] ?? null
+  const prevMonth = prevPeriod(period)
 
   const build = (market: Market | null): ForecastRow => {
     const scope: PeriodScope = market ? { marketId: market.id } : {}
@@ -757,7 +757,7 @@ export function forecastRows(data: DashboardData, kpi: Kpi, period: string): For
       code: market?.code ?? 'ALL',
       name: market?.name ?? 'Total',
       avg3: facts.length ? facts.reduce((s, v) => s + v, 0) / facts.length : null,
-      prevActual: lastCompleted ? periodFact(data, kpi, lastCompleted, scope) : null,
+      prevActual: periodFact(data, kpi, prevMonth, scope),
       savedProjection: market ? savedForecast(data, kpi.id, market.id, period) : null,
       target: market ? periodTarget(data, kpi.id, market.id, period) : totalTarget(data, kpi, period),
     }

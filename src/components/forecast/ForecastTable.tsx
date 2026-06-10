@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { TrendingUp } from 'lucide-react'
-import { completedMonthsBefore, forecastRows } from '@/lib/metrics'
+import { forecastRows, prevPeriod } from '@/lib/metrics'
 import { formatCompact } from '@/lib/format'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { Flag } from '@/components/ui/Flag'
@@ -13,13 +13,13 @@ interface Props {
   period: string
 }
 
-// Country | Potential (last completed month) | 3-month average
+// Country | Potential (previous calendar month) | 3-month average
 const COLS = 'minmax(56px,1fr) 96px 96px'
 
 /**
  * Read-only forecast for one KPI: per-country pipeline for `period`.
- * The "potential" to onboard in `period` is simply how many reached this KPI
- * (e.g. 1st active offer) in the most recent completed month — they typically
+ * The "potential" to onboard in `period` is how many reached this KPI
+ * (e.g. 1st active offer) in the immediately preceding calendar month — they typically
  * finalize about a month later. The 3-month average is a historical prediction.
  */
 export function ForecastTable({ data, kpi, period }: Props) {
@@ -27,8 +27,8 @@ export function ForecastTable({ data, kpi, period }: Props) {
   const marketRows = rows.filter((r) => r.market)
   const totalRow = rows.find((r) => !r.market)!
 
-  const sourceMonth = completedMonthsBefore(period, 1)[0]
-  const sourceLabel = sourceMonth ? format(parseISO(sourceMonth), 'MMMM') : '—'
+  const sourceMonth = prevPeriod(period)
+  const sourceLabel = format(parseISO(sourceMonth), 'MMMM')
   const monthLabel = format(parseISO(period), 'MMMM')
 
   return (
