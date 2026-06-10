@@ -51,9 +51,13 @@ export function SummaryBar({ snaps, period, scopeCountry, onClearScope }: Props)
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2/50 px-3 py-2 text-sm font-medium text-ink-muted">
-          <Globe2 size={16} strokeWidth={2} />
-          All countries
+        <div className="flex items-center gap-2.5 rounded-xl border-2 border-transparent bg-surface-2/50 py-1.5 pl-2.5 pr-1.5">
+          <Globe2 size={26} strokeWidth={1.8} className="shrink-0 text-ink-muted" />
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">Viewing</p>
+            <p className="truncate font-display text-sm font-semibold text-ink">All countries</p>
+          </div>
+          <div className="h-7 w-7 shrink-0" />
         </div>
       )}
 
