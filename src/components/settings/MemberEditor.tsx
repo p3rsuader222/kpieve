@@ -55,8 +55,8 @@ export function MemberEditor({ open, member, markets, saving, onClose, onSubmit 
     e.target.value = ''
   }
 
-  const toggleMarket = (id: string) =>
-    setMarketIds((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]))
+  // One market per person — selecting replaces the previous choice.
+  const selectMarket = (id: string) => setMarketIds((xs) => (xs[0] === id ? [] : [id]))
 
   function submit() {
     if (!name.trim()) return
@@ -78,7 +78,7 @@ export function MemberEditor({ open, member, markets, saving, onClose, onSubmit 
       open={open}
       onClose={onClose}
       title={member ? 'Edit member' : 'Add member'}
-      description="Set the member's details and the markets they cover."
+      description="Set the member's details and the market they cover."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -171,15 +171,16 @@ export function MemberEditor({ open, member, markets, saving, onClose, onSubmit 
         </div>
 
         <div>
-          <span className="mb-2 block text-xs font-semibold text-ink-soft">Markets covered</span>
+          <span className="mb-2 block text-xs font-semibold text-ink-soft">Market</span>
           <div className="flex flex-wrap gap-2">
             {markets.map((m) => {
-              const on = marketIds.includes(m.id)
+              const on = marketIds[0] === m.id
               return (
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => toggleMarket(m.id)}
+                  onClick={() => selectMarket(m.id)}
+                  aria-pressed={on}
                   className={cn(
                     'rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
                     on
@@ -193,6 +194,7 @@ export function MemberEditor({ open, member, markets, saving, onClose, onSubmit 
               )
             })}
           </div>
+          <p className="mt-1.5 text-2xs text-ink-muted">Each person is assigned to a single market.</p>
         </div>
 
         <div className="flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-2/50 px-4 py-3">

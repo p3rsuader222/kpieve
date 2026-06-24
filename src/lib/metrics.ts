@@ -9,7 +9,7 @@ import {
   startOfWeek,
   subMonths,
 } from 'date-fns'
-import type { DashboardData, Entry, Kpi, KpiAggregation, Market, Member, TimeRange } from './types'
+import type { AssortmentSeller, BonusRole, DashboardData, Entry, Kpi, KpiAggregation, KpiMarketConfig, Market, Member, TimeRange } from './types'
 import { attainment, deltaIsGood, statusFromAttainment, type Status } from './status'
 
 // ---------- Monthly periods (v2) ----------
@@ -83,8 +83,38 @@ export function periodFact(
   period: string,
   scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
 ): number | null {
+  // Derived KPIs (assortment) come from the sellers table, not rolled-up entries.
+  if (kpi.compute === 'assortment') return assortmentFact(data, period, scope)
   const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start: period, end: monthEnd(period) })
   return aggregate(rows, kpi.aggregation).value
+}
+
+/** Whether one seller cleared their assortment bar (≤100 SKUs → 80%, >100 → 50%). */
+export function assortmentPassed(s: AssortmentSeller): boolean {
+  if (s.planned_skus <= 0) return false
+  const bar = s.planned_skus <= 100 ? 0.8 : 0.5
+  return s.activated_skus / s.planned_skus >= bar
+}
+
+/**
+ * Derived "Planned assortment completeness" fact: % of onboarded sellers (in scope,
+ * for `period`) who passed their own 80/50 bar. Null when no sellers were recorded.
+ */
+export function assortmentFact(
+  data: DashboardData,
+  period: string,
+  scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
+): number | null {
+  const considered = data.assortmentSellers.filter(
+    (s) =>
+      s.period === period &&
+      s.planned_skus > 0 &&
+      (scope.marketId === undefined || s.market_id === scope.marketId) &&
+      (scope.memberId === undefined || s.member_id === scope.memberId),
+  )
+  if (considered.length === 0) return null
+  const passed = considered.filter(assortmentPassed).length
+  return (passed / considered.length) * 100
 }
 
 export type Granularity = 'day' | 'week' | 'month'
@@ -641,61 +671,117 @@ export const BONUS_CAP = 1.5
 /** A KPI must reach at least this attainment to pay any bonus (else €0 for it). */
 export const BONUS_THRESHOLD = 0.8
 
-export function bonusWeightOf(data: DashboardData, memberId: string, kpiId: string): number {
-  return data.bonusWeights.find((b) => b.member_id === memberId && b.kpi_id === kpiId)?.weight ?? 0
+/** Name of the gating KPI: extra bonuses pay only for sellers with a 1st active offer. */
+export const ACTIVE_OFFER_KPI_NAME = 'Sellers with 1st active offer'
+
+/** The single market a member belongs to (Eve's model: one market per person). */
+export function memberMarketId(member: Member): string | null {
+  return member.marketIds[0] ?? null
 }
 
-export function memberMaxBonus(data: DashboardData, memberId: string): number {
-  return data.bonusSettings.find((b) => b.member_id === memberId)?.max_bonus ?? 0
+/** A member's base bonus pool for `period` (0 if unset). */
+export function memberBaseBonus(data: DashboardData, memberId: string, period: string): number {
+  return data.bonusBase.find((b) => b.member_id === memberId && b.period === period)?.max_bonus ?? 0
+}
+
+/** The bonus-plan config rows (core weights / extra rates) for a market in `period`. */
+export function marketKpiConfig(data: DashboardData, period: string, marketId: string): KpiMarketConfig[] {
+  return data.kpiMarketConfig.filter((c) => c.period === period && c.market_id === marketId)
 }
 
 export interface MemberBonusKpi {
   kpi: Kpi
-  weight: number // percent 0..100
-  value: number | null // the member's fact for the month
-  target: number | null // the member's target
-  attainment: number | null
+  role: BonusRole
+  weight: number // percent 0..100 (core); 0 for extra
+  value: number | null // fact (core) or qualifying-seller count (extra)
+  target: number | null // core only
+  attainment: number | null // core only
   cappedAttainment: number | null // min(attainment, BONUS_CAP)
-  /** True when attainment ≥ the 80% threshold (so this KPI pays). */
+  /** Core: attainment ≥ 80%. Extra: gate open and count > 0 (so it pays). */
   met: boolean
-  portion: number // maxBonus * weight/100 — the payout at 100% attainment
-  bonus: number // portion * cappedAttainment when met, else 0
+  portion: number // base * weight/100 — the core payout at 100% (0 for extra)
+  eurRate: number // € per qualifying seller (extra); 0 for core
+  bonus: number
 }
 
 export interface MemberBonus {
   member: Member
-  maxBonus: number
-  weightSum: number // sum of weights (percent) — should be 100
-  kpis: MemberBonusKpi[]
+  market: Market | null
+  maxBonus: number // the member's base pool for the month
+  weightSum: number // sum of core weights (percent) — should be 100
+  coreKpis: MemberBonusKpi[]
+  extras: MemberBonusKpi[]
+  coreBonus: number
+  extraBonus: number
   finalBonus: number
+  /** Extra bonuses are gated on the member having ≥1 seller with a 1st active offer. */
+  hasActiveOffer: boolean
 }
 
 /**
- * Each member's bonus for `period`: every KPI's portion (max × weight) scales
- * with that member's attainment, capped at 150% per KPI. Unscored KPIs (no data
- * or no target) contribute 0.
+ * Each member's bonus for `period`, scored against THEIR single market's plan:
+ *  - core KPIs pay `base × weight/100 × attainment` (capped 150%), only once ≥ 80%;
+ *  - extra items pay `count × €/seller`, gated on the member having a 1st active offer.
+ * Members/markets with no plan rows for the month contribute 0.
  */
 export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
-  const kpis = activeKpis(data)
+  const kpiById = new Map(data.kpis.map((k) => [k.id, k]))
+  const activeOffer = data.kpis.find((k) => k.name === ACTIVE_OFFER_KPI_NAME)
+
   return activeMembers(data).map((member) => {
-    const maxBonus = memberMaxBonus(data, member.id)
+    const marketId = memberMarketId(member)
+    const market = marketId ? data.markets.find((m) => m.id === marketId) ?? null : null
+    const base = memberBaseBonus(data, member.id, period)
+    const config = marketId ? marketKpiConfig(data, period, marketId) : []
+
+    const offerCount = activeOffer ? periodFact(data, activeOffer, period, { memberId: member.id }) ?? 0 : 0
+    const hasActiveOffer = offerCount > 0
+
+    const coreKpis: MemberBonusKpi[] = []
+    const extras: MemberBonusKpi[] = []
     let weightSum = 0
-    let finalBonus = 0
-    const rows = kpis.map((kpi) => {
-      const weight = bonusWeightOf(data, member.id, kpi.id)
-      weightSum += weight
-      const value = periodFact(data, kpi, period, { memberId: member.id })
-      const target = memberTargetForPeriod(data, kpi, member, period)
-      const att = attainment(value, target, kpi.direction)
-      const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
-      const met = att != null && att >= BONUS_THRESHOLD
-      const portion = (maxBonus * weight) / 100
-      // Below the 80% threshold the KPI pays nothing; otherwise scale by attainment (capped).
-      const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
-      finalBonus += bonus
-      return { kpi, weight, value, target, attainment: att, cappedAttainment, met, portion, bonus }
-    })
-    return { member, maxBonus, weightSum, kpis: rows, finalBonus }
+    let coreBonus = 0
+    let extraBonus = 0
+
+    for (const c of config) {
+      const kpi = kpiById.get(c.kpi_id)
+      if (!kpi || !kpi.active) continue
+
+      if (c.role === 'core') {
+        weightSum += c.weight
+        const value = periodFact(data, kpi, period, { memberId: member.id })
+        const target = memberTargetForPeriod(data, kpi, member, period)
+        const att = attainment(value, target, kpi.direction)
+        const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
+        const met = att != null && att >= BONUS_THRESHOLD
+        const portion = (base * c.weight) / 100
+        const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
+        coreBonus += bonus
+        coreKpis.push({ kpi, role: 'core', weight: c.weight, value, target, attainment: att, cappedAttainment, met, portion, eurRate: 0, bonus })
+      } else {
+        const count = periodFact(data, kpi, period, { memberId: member.id }) ?? 0
+        const met = hasActiveOffer && count > 0
+        const bonus = met ? count * c.eur_rate : 0
+        extraBonus += bonus
+        extras.push({ kpi, role: 'extra', weight: 0, value: count, target: null, attainment: null, cappedAttainment: null, met, portion: 0, eurRate: c.eur_rate, bonus })
+      }
+    }
+
+    coreKpis.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
+    extras.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
+
+    return {
+      member,
+      market,
+      maxBonus: base,
+      weightSum,
+      coreKpis,
+      extras,
+      coreBonus,
+      extraBonus,
+      finalBonus: coreBonus + extraBonus,
+      hasActiveOffer,
+    }
   })
 }
 

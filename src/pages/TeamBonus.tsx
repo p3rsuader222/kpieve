@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Coins, Database } from 'lucide-react'
+import { Coins } from 'lucide-react'
 import { monthStart } from '@/lib/metrics'
-import { usingMockData, type BonusSettingUpsert, type BonusWeightUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useBonusLock } from '@/hooks/useBonusLock'
-import { useConfigMutations } from '@/hooks/useConfigMutations'
-import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 import { BonusGate } from '@/components/bonus/BonusGate'
@@ -14,33 +11,12 @@ import { TeamBonusTable } from '@/components/bonus/TeamBonusTable'
 
 function TeamBonusInner() {
   const { data, isLoading } = useDashboard()
-  const m = useConfigMutations()
-  const toast = useToast()
   const [period, setPeriod] = useState<string | null>(null)
-
-  function guard(): boolean {
-    if (usingMockData) {
-      toast.info('Demo mode — connect Supabase to save the bonus plan.')
-      return false
-    }
-    return true
-  }
-
-  async function save(weights: BonusWeightUpsert[], settings: BonusSettingUpsert[]) {
-    if (!guard()) return
-    try {
-      await Promise.all([m.upsertBonusWeights.mutateAsync(weights), m.upsertBonusSettings.mutateAsync(settings)])
-      toast.success('Bonus plan saved.')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save the bonus plan.')
-    }
-  }
 
   if (isLoading || !data) return <BonusSkeleton />
 
   const bonusPeriod = period ?? monthStart(new Date())
   const monthLabel = format(parseISO(bonusPeriod), 'MMMM yyyy')
-  const saving = m.upsertBonusWeights.isPending || m.upsertBonusSettings.isPending
 
   return (
     <div className="max-w-[1120px] space-y-4">
@@ -63,26 +39,15 @@ function TeamBonusInner() {
         </div>
       </div>
 
-      {usingMockData && (
-        <div className="flex items-center gap-3 rounded-xl border border-line bg-brand-soft/60 px-4 py-3 text-sm text-ink-soft">
-          <Database size={17} className="shrink-0 text-brand" />
-          <span>
-            <strong className="font-semibold text-ink">Demo mode.</strong> You can try the plan and preview payouts, but
-            saving needs Supabase connected.
-          </span>
-        </div>
-      )}
-
       <p className="max-w-3xl text-sm text-ink-muted">
-        See how everyone's bonus is shaping up for{' '}
-        <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Each KPI starts paying once a person
-        reaches <strong className="font-semibold text-ink-soft">80%</strong>, up to{' '}
-        <strong className="font-semibold text-ink-soft">150%</strong> for beating the target. Switch to{' '}
-        <strong className="font-semibold text-ink-soft">Weights</strong> to set each person's bonus pot and how it's
-        split across KPIs.
+        How everyone's bonus is shaping up for{' '}
+        <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Each person is scored against their own
+        market's plan — core KPIs start paying at <strong className="font-semibold text-ink-soft">80%</strong> (up to{' '}
+        <strong className="font-semibold text-ink-soft">150%</strong>), and extra bonuses pay per qualifying seller. Set
+        weights, rates and base pools in <strong className="font-semibold text-ink-soft">Settings → Bonus plan</strong>.
       </p>
 
-      <TeamBonusTable data={data} period={bonusPeriod} saving={saving} onSave={save} />
+      <TeamBonusTable data={data} period={bonusPeriod} />
     </div>
   )
 }

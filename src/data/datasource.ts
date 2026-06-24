@@ -1,11 +1,14 @@
 import { format, subDays } from 'date-fns'
 import type {
+  AssortmentSeller,
+  BonusBase,
   BonusSetting,
   BonusWeight,
   DashboardData,
   Entry,
   Forecast,
   Kpi,
+  KpiMarketConfig,
   Market,
   Member,
   Target,
@@ -38,8 +41,10 @@ export async function fetchDashboard(): Promise<DashboardData> {
 
   const cutoff = format(subDays(new Date(), HISTORY_DAYS), 'yyyy-MM-dd')
 
-  const [markets, members, memberMarkets, kpis, entries, targets, forecasts, bonusWeights, bonusSettings] =
-    await Promise.all([
+  const [
+    markets, members, memberMarkets, kpis, entries, targets, forecasts, bonusWeights, bonusSettings,
+    kpiMarketConfig, bonusBase, assortmentSellers,
+  ] = await Promise.all([
     supabase.from('markets').select('id, code, name, sort_order').order('sort_order'),
     supabase.from('members').select('id, name, initials, color, active, sort_order, avatar').order('sort_order'),
     supabase.from('member_markets').select('member_id, market_id'),
@@ -52,11 +57,18 @@ export async function fetchDashboard(): Promise<DashboardData> {
     supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('bonus_weights').select('member_id, kpi_id, weight'),
     supabase.from('bonus_settings').select('member_id, max_bonus'),
+    supabase.from('bonus_kpi_markets').select('period, market_id, kpi_id, role, weight, eur_rate').gte('period', cutoff),
+    supabase.from('bonus_base').select('period, member_id, max_bonus').gte('period', cutoff),
+    supabase
+      .from('assortment_sellers')
+      .select('id, member_id, market_id, period, name, planned_skus, activated_skus, note')
+      .gte('period', cutoff),
   ])
 
   const err =
     markets.error || members.error || memberMarkets.error || kpis.error || entries.error || targets.error ||
-    forecasts.error || bonusWeights.error || bonusSettings.error
+    forecasts.error || bonusWeights.error || bonusSettings.error ||
+    kpiMarketConfig.error || bonusBase.error || assortmentSellers.error
   if (err) throw err
 
   const coverage = new Map<string, string[]>()
@@ -88,6 +100,19 @@ export async function fetchDashboard(): Promise<DashboardData> {
     ),
     bonusSettings: (bonusSettings.data ?? []).map(
       (b): BonusSetting => ({ ...b, max_bonus: Number(b.max_bonus) }),
+    ),
+    kpiMarketConfig: (kpiMarketConfig.data ?? []).map(
+      (c): KpiMarketConfig => ({ ...c, weight: Number(c.weight), eur_rate: Number(c.eur_rate) }),
+    ),
+    bonusBase: (bonusBase.data ?? []).map(
+      (b): BonusBase => ({ ...b, max_bonus: Number(b.max_bonus) }),
+    ),
+    assortmentSellers: (assortmentSellers.data ?? []).map(
+      (s): AssortmentSeller => ({
+        ...s,
+        planned_skus: Number(s.planned_skus),
+        activated_skus: Number(s.activated_skus),
+      }),
     ),
   }
 }
@@ -215,6 +240,62 @@ export async function upsertBonusSettings(rows: BonusSettingUpsert[]): Promise<v
   if (rows.length === 0) return
   const client = requireClient()
   const { error } = await client.from('bonus_settings').upsert(rows, { onConflict: 'member_id' })
+  if (error) throw error
+}
+
+export interface KpiMarketConfigUpsert {
+  period: string // yyyy-MM-01
+  market_id: string
+  kpi_id: string
+  role: 'core' | 'extra'
+  weight: number
+  eur_rate: number
+}
+
+export async function upsertKpiMarketConfig(rows: KpiMarketConfigUpsert[]): Promise<void> {
+  if (rows.length === 0) return
+  const client = requireClient()
+  const { error } = await client
+    .from('bonus_kpi_markets')
+    .upsert(rows, { onConflict: 'period,market_id,kpi_id' })
+  if (error) throw error
+}
+
+export interface BonusBaseUpsert {
+  period: string // yyyy-MM-01
+  member_id: string
+  max_bonus: number
+}
+
+export async function upsertBonusBase(rows: BonusBaseUpsert[]): Promise<void> {
+  if (rows.length === 0) return
+  const client = requireClient()
+  const { error } = await client.from('bonus_base').upsert(rows, { onConflict: 'period,member_id' })
+  if (error) throw error
+}
+
+export interface AssortmentSellerInput {
+  id?: string
+  member_id: string
+  market_id: string
+  period: string // yyyy-MM-01
+  name: string | null
+  planned_skus: number
+  activated_skus: number
+  note: string | null
+}
+
+export async function saveAssortmentSeller(row: AssortmentSellerInput): Promise<void> {
+  const client = requireClient()
+  const { error } = row.id
+    ? await client.from('assortment_sellers').update(row).eq('id', row.id)
+    : await client.from('assortment_sellers').insert(row)
+  if (error) throw error
+}
+
+export async function deleteAssortmentSeller(id: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('assortment_sellers').delete().eq('id', id)
   if (error) throw error
 }
 

@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/Button'
 import { Flag } from '@/components/ui/Flag'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { AssortmentEditor } from '@/components/update/AssortmentEditor'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
 
@@ -37,7 +38,8 @@ export function Update() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
 
-  const kpis = data ? activeKpis(data) : []
+  // Assortment is derived from per-seller data (own editor), so it's not a grid cell.
+  const kpis = data ? activeKpis(data).filter((k) => k.compute === 'entries') : []
   const members = data ? activeMembers(data) : []
   const activeKpi = kpis.find((k) => k.id === activeKpiId) ?? kpis[0]
 
@@ -219,15 +221,24 @@ export function Update() {
                 {markets.map((m) => {
                   const t = periodTarget(data, activeKpi.id, m.id, period)
                   const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
+                  const cfg = data.kpiMarketConfig.find(
+                    (c) => c.period === period && c.market_id === m.id && c.kpi_id === activeKpi.id,
+                  )
                   return (
                     <div key={m.id} className="flex flex-col items-center gap-1">
                       <Flag code={m.code} size={22} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
-                      <span className="tnum text-2xs leading-tight text-ink-muted/80">
-                        tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
-                        {' · '}
-                        {mtd != null ? formatCompact(mtd, activeKpi.format) : '0'} so far
-                      </span>
+                      {cfg?.role === 'extra' ? (
+                        <span className="rounded-full bg-brand-soft px-1.5 text-2xs font-semibold text-brand-ink">
+                          extra · €{cfg.eur_rate}/seller
+                        </span>
+                      ) : (
+                        <span className="tnum text-2xs leading-tight text-ink-muted/80">
+                          tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
+                          {' · '}
+                          {mtd != null ? formatCompact(mtd, activeKpi.format) : '0'} so far
+                        </span>
+                      )}
                     </div>
                   )
                 })}
@@ -314,6 +325,14 @@ export function Update() {
           </p>
         </Panel>
       </div>
+
+      {/* Per-seller assortment quality (feeds the Planned assortment completeness KPI) */}
+      <Panel
+        eyebrow={`Assortment quality · ${format(parseISO(period), 'MMMM yyyy')}`}
+        title="Planned assortment completeness"
+      >
+        <AssortmentEditor data={data} period={period} />
+      </Panel>
     </div>
   )
 }

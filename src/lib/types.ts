@@ -5,6 +5,10 @@ export type KpiDirection = 'higher_better' | 'lower_better'
 /** How per-(member,market) values roll up into totals. */
 export type KpiAggregation = 'sum' | 'avg'
 export type EntrySource = 'manual' | 'sheet'
+/** Where a KPI's monthly fact comes from: rolled-up entries, or derived from sellers. */
+export type KpiCompute = 'entries' | 'assortment'
+/** In a given market+month, a KPI is either a weighted core KPI or a flat per-seller bonus. */
+export type BonusRole = 'core' | 'extra'
 
 export interface Market {
   id: string
@@ -41,6 +45,8 @@ export interface Kpi {
   default_target: number | null
   sort_order: number
   active: boolean
+  /** Fact source. 'entries' (default) rolls up the entries table; 'assortment' derives % of sellers who passed. */
+  compute: KpiCompute
 }
 
 export interface Entry {
@@ -94,6 +100,44 @@ export interface BonusSetting {
   max_bonus: number
 }
 
+/**
+ * Per-month, per-market role of one KPI in the bonus plan.
+ * `core` → weighted share of the pool (`weight` %, 80%/150% rules apply).
+ * `extra` → flat per-seller bonus (`eur_rate` € × qualifying sellers).
+ * One row per (period, market, kpi). Replaces per-member BonusWeight for scoring.
+ */
+export interface KpiMarketConfig {
+  period: string // month start, yyyy-MM-01
+  market_id: string
+  kpi_id: string
+  role: BonusRole
+  weight: number // percent 0..100 (core)
+  eur_rate: number // € per qualifying seller (extra)
+}
+
+/** Per-month base bonus pool for a member (each member belongs to one market). */
+export interface BonusBase {
+  period: string // month start, yyyy-MM-01
+  member_id: string
+  max_bonus: number
+}
+
+/**
+ * One onboarded seller's assortment progress in a month. The app derives the bar
+ * (≤100 planned SKUs → 80%, >100 → 50%) and pass/fail, then aggregates to the
+ * "Planned assortment completeness" KPI (% of sellers who passed).
+ */
+export interface AssortmentSeller {
+  id: string
+  member_id: string
+  market_id: string
+  period: string // onboarding month, yyyy-MM-01
+  name: string | null
+  planned_skus: number
+  activated_skus: number
+  note: string | null
+}
+
 /** Convenience bundle of everything the dashboard needs in one shot. */
 export interface DashboardData {
   markets: Market[]
@@ -104,6 +148,9 @@ export interface DashboardData {
   forecasts: Forecast[]
   bonusWeights: BonusWeight[]
   bonusSettings: BonusSetting[]
+  kpiMarketConfig: KpiMarketConfig[]
+  bonusBase: BonusBase[]
+  assortmentSellers: AssortmentSeller[]
 }
 
 export type TimeRange = 'today' | 'week' | 'month'
