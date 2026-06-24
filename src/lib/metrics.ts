@@ -138,6 +138,37 @@ export function entryDaysInMonth(data: DashboardData, period: string): { date: s
     .sort((a, z) => (a.date < z.date ? 1 : -1))
 }
 
+/** Per-KPI value count logged on a single day. */
+export interface DayKpiCount {
+  kpiId: string
+  count: number
+}
+
+/**
+ * Per-day update activity for `period`'s month: how many values were logged on
+ * each day, broken down by KPI. Keyed by ISO day (yyyy-MM-dd); only days with at
+ * least one entry are present. Use for the activity calendar.
+ */
+export function entryActivityInMonth(data: DashboardData, period: string): Map<string, { count: number; byKpi: DayKpiCount[] }> {
+  const end = monthEnd(period)
+  const perDay = new Map<string, Map<string, number>>()
+  for (const e of data.entries) {
+    if (e.date < period || e.date > end) continue
+    let kmap = perDay.get(e.date)
+    if (!kmap) {
+      kmap = new Map()
+      perDay.set(e.date, kmap)
+    }
+    kmap.set(e.kpi_id, (kmap.get(e.kpi_id) ?? 0) + 1)
+  }
+  const out = new Map<string, { count: number; byKpi: DayKpiCount[] }>()
+  for (const [date, kmap] of perDay) {
+    const byKpi = [...kmap.entries()].map(([kpiId, count]) => ({ kpiId, count }))
+    out.set(date, { count: byKpi.reduce((s, k) => s + k.count, 0), byKpi })
+  }
+  return out
+}
+
 // ---------- Filtering & ranges ----------
 
 export interface EntryFilter {

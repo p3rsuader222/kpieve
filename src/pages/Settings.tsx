@@ -6,6 +6,7 @@ import { formatValue } from '@/lib/format'
 import type { Kpi, Member } from '@/lib/types'
 import { usingMockData } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
+import { useBonusLock } from '@/hooks/useBonusLock'
 import { useConfigMutations } from '@/hooks/useConfigMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
@@ -29,6 +30,7 @@ export function Settings() {
   const { data, isLoading } = useDashboard()
   const m = useConfigMutations()
   const toast = useToast()
+  const bonusLock = useBonusLock()
 
   const [kpiOpen, setKpiOpen] = useState(false)
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null)
@@ -278,6 +280,23 @@ export function Settings() {
         </ul>
       </Panel>
       </div>
+
+      {/* Privacy */}
+      <Panel eyebrow="Privacy" title="Team Bonus access">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink">Require an access code to open Team Bonus</p>
+            <p className="mt-0.5 text-2xs text-ink-muted">
+              When on, the Team Bonus page is gated by the access code each visit. Turn off to open it without a prompt.
+            </p>
+          </div>
+          <Toggle
+            checked={bonusLock.locked}
+            onChange={bonusLock.setLocked}
+            ariaLabel="Require an access code for Team Bonus"
+          />
+        </div>
+      </Panel>
 
       <KpiEditor open={kpiOpen} kpi={editingKpi} saving={m.saveKpi.isPending} onClose={() => setKpiOpen(false)} onSubmit={submitKpi} />
       <MemberEditor

@@ -4,6 +4,7 @@ import { Coins, Database } from 'lucide-react'
 import { monthStart } from '@/lib/metrics'
 import { usingMockData, type BonusSettingUpsert, type BonusWeightUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
+import { useBonusLock } from '@/hooks/useBonusLock'
 import { useConfigMutations } from '@/hooks/useConfigMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -86,8 +87,13 @@ function TeamBonusInner() {
   )
 }
 
-/** Team Bonus — gated behind a separate password (sensitive compensation data). */
+/**
+ * Team Bonus — optionally gated behind a separate access code (sensitive
+ * compensation data). The lock can be turned off in Settings.
+ */
 export function TeamBonus() {
+  const { locked } = useBonusLock()
+  if (!locked) return <TeamBonusInner />
   return (
     <BonusGate>
       <TeamBonusInner />
