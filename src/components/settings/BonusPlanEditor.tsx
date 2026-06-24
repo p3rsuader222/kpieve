@@ -136,8 +136,13 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
             {market?.name} — KPI plan for {monthLabel}
           </span>
           <span className={cn('tnum text-2xs font-semibold', coreWeightSum === 100 ? 'text-ink-muted' : 'text-warn')}>
-            core Σ {coreWeightSum}% {coreWeightSum === 100 ? '' : '(should be 100)'}
+            weights Σ {coreWeightSum}% {coreWeightSum === 100 ? '' : '(should be 100)'}
           </span>
+        </div>
+        <div className="border-b border-line bg-surface px-3 py-2 text-2xs leading-relaxed text-ink-muted">
+          <strong className="font-semibold text-ink-soft">Core</strong> = a weight % of the bonus pool (pays from 80% of
+          target, up to 150%). <strong className="font-semibold text-ink-soft">Extra</strong> = a flat € per qualifying
+          seller, on top. Core weights should add up to 100%.
         </div>
         <div className="divide-y divide-line">
           {kpis.map((k) => {
@@ -150,34 +155,40 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                   ariaLabel={`${k.name} role`}
                   size="sm"
                   segments={[
-                    { value: 'core', label: 'Core %' },
-                    { value: 'extra', label: 'Extra €' },
+                    { value: 'core', label: 'Core' },
+                    { value: 'extra', label: 'Extra' },
                   ]}
                   value={role}
                   onChange={(v) => setRole(k.id, v as BonusRole)}
                 />
                 {role === 'core' ? (
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    aria-label={`${k.name} weight %`}
-                    value={weights[kk] ?? ''}
-                    onChange={(e) => setWeights((w) => ({ ...w, [kk]: e.target.value }))}
-                    placeholder="%"
-                    className={numInput}
-                  />
+                  <span className="flex items-center justify-end gap-1.5">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      aria-label={`${k.name} weight %`}
+                      value={weights[kk] ?? ''}
+                      onChange={(e) => setWeights((w) => ({ ...w, [kk]: e.target.value }))}
+                      placeholder="0"
+                      className={numInput}
+                    />
+                    <span className="w-14 text-2xs text-ink-muted">% of pool</span>
+                  </span>
                 ) : (
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    aria-label={`${k.name} € per seller`}
-                    value={rates[kk] ?? ''}
-                    onChange={(e) => setRates((r) => ({ ...r, [kk]: e.target.value }))}
-                    placeholder="€"
-                    className={numInput}
-                  />
+                  <span className="flex items-center justify-end gap-1.5">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      aria-label={`${k.name} € per seller`}
+                      value={rates[kk] ?? ''}
+                      onChange={(e) => setRates((r) => ({ ...r, [kk]: e.target.value }))}
+                      placeholder="0"
+                      className={numInput}
+                    />
+                    <span className="w-14 text-2xs text-ink-muted">€/seller</span>
+                  </span>
                 )}
               </div>
             )

@@ -1,11 +1,9 @@
 import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Lock } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { BONUS_PASSWORD } from '@/lib/bonusAccess'
 
-// Separate, page-specific code. Set VITE_BONUS_PASSWORD in your env (e.g. Netlify)
-// for production — a short PIN works best with this entry style; defaults to
-// "bonus" for local/demo. Soft client-side gate, not real access control.
-const BONUS_PASSWORD = import.meta.env.VITE_BONUS_PASSWORD || 'bonus'
+// A short PIN works best with this per-character entry style.
 const LEN = BONUS_PASSWORD.length
 const NUMERIC = /^\d+$/.test(BONUS_PASSWORD)
 

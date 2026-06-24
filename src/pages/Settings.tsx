@@ -11,9 +11,12 @@ import { useConfigMutations } from '@/hooks/useConfigMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Toggle } from '@/components/ui/Toggle'
+import { verifyBonusPassword } from '@/lib/bonusAccess'
 import { KpiEditor } from '@/components/settings/KpiEditor'
 import { MemberEditor } from '@/components/settings/MemberEditor'
 import { TargetEditor } from '@/components/settings/TargetEditor'
@@ -36,6 +39,30 @@ export function Settings() {
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null)
   const [memberOpen, setMemberOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+
+  // Disabling the Team Bonus lock requires the access code (turning it on doesn't).
+  const [lockPromptOpen, setLockPromptOpen] = useState(false)
+  const [lockCode, setLockCode] = useState('')
+  const [lockError, setLockError] = useState(false)
+
+  function onToggleLock(next: boolean) {
+    if (next) {
+      bonusLock.setLocked(true)
+      return
+    }
+    setLockCode('')
+    setLockError(false)
+    setLockPromptOpen(true)
+  }
+
+  function confirmDisableLock() {
+    if (verifyBonusPassword(lockCode)) {
+      bonusLock.setLocked(false)
+      setLockPromptOpen(false)
+    } else {
+      setLockError(true)
+    }
+  }
 
   function guard(): boolean {
     if (usingMockData) {
@@ -287,12 +314,12 @@ export function Settings() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-ink">Require an access code to open Team Bonus</p>
             <p className="mt-0.5 text-2xs text-ink-muted">
-              When on, the Team Bonus page is gated by the access code each visit. Turn off to open it without a prompt.
+              When on, the Team Bonus page is gated by the access code each visit. Turning it off asks for the code once.
             </p>
           </div>
           <Toggle
             checked={bonusLock.locked}
-            onChange={bonusLock.setLocked}
+            onChange={onToggleLock}
             ariaLabel="Require an access code for Team Bonus"
           />
         </div>
@@ -307,6 +334,39 @@ export function Settings() {
         onClose={() => setMemberOpen(false)}
         onSubmit={submitMember}
       />
+
+      <Modal
+        open={lockPromptOpen}
+        onClose={() => setLockPromptOpen(false)}
+        title="Confirm with the access code"
+        description="Enter the Team Bonus code to turn the lock off."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setLockPromptOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={confirmDisableLock} disabled={!lockCode.trim()}>
+              Turn off lock
+            </Button>
+          </>
+        }
+      >
+        <Input
+          type="password"
+          label="Access code"
+          value={lockCode}
+          onChange={(e) => {
+            setLockCode(e.target.value)
+            setLockError(false)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') confirmDisableLock()
+          }}
+          autoFocus
+          placeholder="••••"
+        />
+        {lockError && <p className="mt-2 text-xs font-medium text-bad">Wrong code — try again.</p>}
+      </Modal>
     </div>
   )
 }
