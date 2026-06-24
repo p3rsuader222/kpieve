@@ -2,7 +2,8 @@
 -- KPIeve — test data for Mar–Jun 2026 (run AFTER migrate-v5-quality-kpis.sql)
 -- The app isn't in use yet, so this populates the live DB so every page has data.
 -- Idempotent: entries use ON CONFLICT; sellers are guarded by an existence check.
--- Today is assumed ~2026-06-24, so June is the in-progress month.
+-- Safe to re-run — it only fills in what's missing.
+-- All four months are fully populated (no dependency on the server's clock).
 -- ============================================================================
 
 -- ---------- One market per member (1:1) ----------
@@ -121,12 +122,12 @@ begin
         if k.monthly > 0 then
           d1 := ceil(k.monthly / 2.0);
           d2 := k.monthly - d1;
-          if d1 > 0 and v_day1 <= current_date then
+          if d1 > 0 then
             insert into public.entries (kpi_id, member_id, market_id, date, value, source)
             values (k.kpi_id, rec.member_id, rec.market_id, v_day1, d1, 'manual')
             on conflict (kpi_id, member_id, market_id, date) do nothing;
           end if;
-          if d2 > 0 and v_day2 <= current_date then
+          if d2 > 0 then
             insert into public.entries (kpi_id, member_id, market_id, date, value, source)
             values (k.kpi_id, rec.member_id, rec.market_id, v_day2, d2, 'manual')
             on conflict (kpi_id, member_id, market_id, date) do nothing;
@@ -136,16 +137,12 @@ begin
 
       -- Late rate (AVG percent, lower is better) — one reading per update day.
       v_lr := round((4 + (1 - rec.strength) * 8) * (1.12 - 0.03 * m_idx), 1);
-      if v_day1 <= current_date then
-        insert into public.entries (kpi_id, member_id, market_id, date, value, source)
-        values (late_kpi, rec.member_id, rec.market_id, v_day1, v_lr, 'manual')
-        on conflict (kpi_id, member_id, market_id, date) do nothing;
-      end if;
-      if v_day2 <= current_date then
-        insert into public.entries (kpi_id, member_id, market_id, date, value, source)
-        values (late_kpi, rec.member_id, rec.market_id, v_day2, round(v_lr * 1.05, 1), 'manual')
-        on conflict (kpi_id, member_id, market_id, date) do nothing;
-      end if;
+      insert into public.entries (kpi_id, member_id, market_id, date, value, source)
+      values (late_kpi, rec.member_id, rec.market_id, v_day1, v_lr, 'manual')
+      on conflict (kpi_id, member_id, market_id, date) do nothing;
+      insert into public.entries (kpi_id, member_id, market_id, date, value, source)
+      values (late_kpi, rec.member_id, rec.market_id, v_day2, round(v_lr * 1.05, 1), 'manual')
+      on conflict (kpi_id, member_id, market_id, date) do nothing;
 
       -- Per-seller assortment (5 sellers; passrate drives how many clear their bar).
       if not exists (select 1 from public.assortment_sellers
@@ -167,5 +164,5 @@ begin
   end loop;
 end $$;
 
--- Done. Reload the app: Dashboard / Forecast / Activity / Team Bonus now have Mar–Jun data.
+-- Done. Reload the app: Dashboard / Forecast / Activity / Team Bonus now have all 4 months.
 -- Note: Karl Tamm has no 1st active offer in March, so his extra bonuses are gated off that month.

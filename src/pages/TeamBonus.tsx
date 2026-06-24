@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Coins } from 'lucide-react'
 import { monthStart } from '@/lib/metrics'
+import { usingMockData, type BonusBaseUpsert, type KpiMarketConfigUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useBonusLock } from '@/hooks/useBonusLock'
+import { useConfigMutations } from '@/hooks/useConfigMutations'
+import { useToast } from '@/components/ui/Toast'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 import { BonusGate } from '@/components/bonus/BonusGate'
@@ -11,12 +14,28 @@ import { TeamBonusTable } from '@/components/bonus/TeamBonusTable'
 
 function TeamBonusInner() {
   const { data, isLoading } = useDashboard()
+  const m = useConfigMutations()
+  const toast = useToast()
   const [period, setPeriod] = useState<string | null>(null)
+
+  async function saveBonusPlan(config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) {
+    if (usingMockData) {
+      toast.info('Demo mode — connect Supabase to save the bonus plan.')
+      return
+    }
+    try {
+      await Promise.all([m.upsertKpiMarketConfig.mutateAsync(config), m.upsertBonusBase.mutateAsync(base)])
+      toast.success('Bonus plan saved.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the bonus plan.')
+    }
+  }
 
   if (isLoading || !data) return <BonusSkeleton />
 
   const bonusPeriod = period ?? monthStart(new Date())
   const monthLabel = format(parseISO(bonusPeriod), 'MMMM yyyy')
+  const saving = m.upsertKpiMarketConfig.isPending || m.upsertBonusBase.isPending
 
   return (
     <div className="max-w-[1120px] space-y-4">
@@ -41,13 +60,12 @@ function TeamBonusInner() {
 
       <p className="max-w-3xl text-sm text-ink-muted">
         How everyone's bonus is shaping up for{' '}
-        <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Each person is scored against their own
-        market's plan — core KPIs start paying at <strong className="font-semibold text-ink-soft">80%</strong> (up to{' '}
-        <strong className="font-semibold text-ink-soft">150%</strong>), and extra bonuses pay per qualifying seller. Set
-        weights, rates and base pools in <strong className="font-semibold text-ink-soft">Settings → Bonus plan</strong>.
+        <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Click a person to see their breakdown. Use
+        the <strong className="font-semibold text-ink-soft">Weights</strong> tab to set each market's weights, €/seller
+        rates and base pools.
       </p>
 
-      <TeamBonusTable data={data} period={bonusPeriod} />
+      <TeamBonusTable data={data} period={bonusPeriod} saving={saving} onSave={saveBonusPlan} />
     </div>
   )
 }

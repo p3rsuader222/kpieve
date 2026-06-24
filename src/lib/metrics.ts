@@ -152,6 +152,10 @@ export function bucketFact(
   granularity: Granularity,
   scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
 ): number | null {
+  // Assortment is a monthly, per-seller derived metric — only meaningful per month.
+  if (kpi.compute === 'assortment') {
+    return granularity === 'month' ? assortmentFact(data, monthStart(start), scope) : null
+  }
   const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start, end: bucketEndOf(start, granularity) })
   return aggregate(rows, kpi.aggregation).value
 }

@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Copy, Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { activeKpis, activeMembers, memberMarketId, monthStart, prevPeriod } from '@/lib/metrics'
+import { activeKpis, activeMembers, memberMarketId, prevPeriod } from '@/lib/metrics'
 import type { BonusRole, DashboardData, Market } from '@/lib/types'
 import type { BonusBaseUpsert, KpiMarketConfigUpsert } from '@/data/datasource'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Flag } from '@/components/ui/Flag'
-import { MonthNav } from '@/components/dashboard/MonthNav'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 interface Props {
   data: DashboardData
+  period: string // controlled by the parent (the Team Bonus month nav)
   saving: boolean
   onSave: (config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) => void
 }
@@ -27,12 +27,11 @@ function num(v: string | undefined): number {
   return Number.isNaN(n) ? 0 : n
 }
 
-export function BonusPlanEditor({ data, saving, onSave }: Props) {
+export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
   const kpis = activeKpis(data)
   const members = activeMembers(data)
   const markets = useMemo(() => [...data.markets].sort((a, z) => a.sort_order - z.sort_order), [data.markets])
 
-  const [period, setPeriod] = useState(() => monthStart(new Date()))
   const [marketId, setMarketId] = useState(markets[0]?.id ?? '')
 
   const [roles, setRoles] = useState<Record<string, BonusRole>>({})
@@ -108,10 +107,9 @@ export function BonusPlanEditor({ data, saving, onSave }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-ink-muted">Plan for</span>
-          <MonthNav period={period} onChange={(p) => setPeriod(p)} clampFuture={false} />
-        </div>
+        <span className="text-sm text-ink-soft">
+          Plan for <strong className="font-semibold text-ink">{monthLabel}</strong>
+        </span>
         <div className="flex items-center gap-2">
           <Button variant="subtle" size="sm" onClick={() => loadFrom(prevPeriod(period))} title="Copy weights, rates and base pools from the previous month">
             <Copy size={14} /> Copy previous month

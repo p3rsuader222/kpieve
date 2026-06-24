@@ -17,8 +17,7 @@ import { Toggle } from '@/components/ui/Toggle'
 import { KpiEditor } from '@/components/settings/KpiEditor'
 import { MemberEditor } from '@/components/settings/MemberEditor'
 import { TargetEditor } from '@/components/settings/TargetEditor'
-import { BonusPlanEditor } from '@/components/settings/BonusPlanEditor'
-import type { BonusBaseUpsert, KpiMarketConfigUpsert, TargetUpsert } from '@/data/datasource'
+import type { TargetUpsert } from '@/data/datasource'
 
 const FORMAT_LABEL: Record<Kpi['format'], string> = {
   number: 'Number',
@@ -128,16 +127,6 @@ export function Settings() {
       toast.success(`Saved ${rows.length} target${rows.length === 1 ? '' : 's'}.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save targets.')
-    }
-  }
-
-  async function saveBonusPlan(config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) {
-    if (!guard()) return
-    try {
-      await Promise.all([m.upsertKpiMarketConfig.mutateAsync(config), m.upsertBonusBase.mutateAsync(base)])
-      toast.success('Bonus plan saved.')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save the bonus plan.')
     }
   }
 
@@ -291,15 +280,6 @@ export function Settings() {
         </ul>
       </Panel>
       </div>
-
-      {/* Bonus plan (per market · per month) */}
-      <Panel eyebrow="Per market · per month" title="Bonus plan">
-        <BonusPlanEditor
-          data={data}
-          saving={m.upsertKpiMarketConfig.isPending || m.upsertBonusBase.isPending}
-          onSave={saveBonusPlan}
-        />
-      </Panel>
 
       {/* Privacy */}
       <Panel eyebrow="Privacy" title="Team Bonus access">
