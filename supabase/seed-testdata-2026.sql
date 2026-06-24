@@ -1,27 +1,11 @@
 -- ============================================================================
 -- KPIeve — test data for Mar–Jun 2026 (run AFTER migrate-v5-quality-kpis.sql)
 -- The app isn't in use yet, so this populates the live DB so every page has data.
--- Idempotent: entries use ON CONFLICT; sellers are guarded by an existence check.
--- Safe to re-run — it only fills in what's missing.
+-- Works with WHATEVER members exist in your database — it reads each member's
+-- own market assignment (member_markets); no names are hardcoded.
+-- Idempotent and safe to re-run — entries use ON CONFLICT, sellers are guarded.
 -- All four months are fully populated (no dependency on the server's clock).
 -- ============================================================================
-
--- ---------- One market per member (1:1) ----------
-delete from public.member_markets
-  where member_id in (select id from public.members
-    where name in ('Greta Kazlauskaitė','Karl Tamm','Marta Kowalska','Rūta Bērziņa'));
-
-insert into public.member_markets (member_id, market_id)
-select m.id, mk.id
-from public.members m
-join (values
-  ('Greta Kazlauskaitė','LT'),
-  ('Karl Tamm','EE'),
-  ('Marta Kowalska','PL'),
-  ('Rūta Bērziņa','LV')
-) as a(name, code) on a.name = m.name
-join public.markets mk on mk.code = a.code
-on conflict do nothing;
 
 -- ---------- Targets per (kpi, market, month) for Mar–Jul ----------
 -- Uses each KPI's default_target across all markets (assortment = 100%).
@@ -35,15 +19,10 @@ on conflict (kpi_id, market_id, period) do nothing;
 
 -- ---------- Base bonus pool per member for Mar–Jul ----------
 insert into public.bonus_base (period, member_id, max_bonus)
-select g.period, m.id, b.base
+select g.period, m.id, 1000
 from public.members m
-join (values
-  ('Greta Kazlauskaitė', 1000),
-  ('Karl Tamm',           900),
-  ('Marta Kowalska',     1100),
-  ('Rūta Bērziņa',        950)
-) as b(name, base) on b.name = m.name
 cross join (select generate_series('2026-03-01'::date, '2026-07-01'::date, interval '1 month')::date as period) g
+where m.active
 on conflict (period, member_id) do nothing;
 
 -- ---------- Copy July's per-market KPI config back to Mar–Jun ----------
@@ -56,6 +35,10 @@ where b.period = '2026-07-01'
 on conflict (period, market_id, kpi_id) do nothing;
 
 -- ---------- Entries + per-seller assortment (deterministic, varied) ----------
+-- Loops over every active member, using their assigned market. A per-member
+-- "row number" drives deterministic strength + assortment pass-rate so some
+-- KPIs clear their bar and some don't. The 2nd member gets no 1st active offer
+-- in March, which exercises the extra-bonus gate.
 do $$
 declare
   rec record;
@@ -69,7 +52,6 @@ declare
   v_npass int;
   s int;
   v_total_sellers int := 5;
-  karl_id uuid;
   k record;
   active_kpi uuid;
   first_order_kpi uuid;
@@ -86,18 +68,20 @@ begin
   select id into phh_live_kpi    from public.kpis where name = 'PHH live campaign';
   select id into fbp_kpi         from public.kpis where name = 'FBP';
   select id into late_kpi        from public.kpis where name = 'Late rate per portfolio CCD';
-  select id into karl_id         from public.members where name = 'Karl Tamm';
 
   for rec in
-    select m.id as member_id, mk.id as market_id, a.strength, a.passrate
-    from public.members m
-    join (values
-      ('Greta Kazlauskaitė','LT', 1.05, 0.90),
-      ('Karl Tamm',         'EE', 0.85, 0.60),
-      ('Marta Kowalska',    'PL', 1.00, 0.80),
-      ('Rūta Bērziņa',      'LV', 0.90, 0.50)
-    ) as a(name, code, strength, passrate) on a.name = m.name
-    join public.markets mk on mk.code = a.code
+    select sub.member_id, sub.market_id, sub.rn,
+           (0.82 + ((sub.rn - 1) % 5) * 0.06)::numeric as strength,
+           (0.40 + ((sub.rn - 1) % 4) * 0.20)::numeric as passrate
+    from (
+      select m.id as member_id,
+             (select mm.market_id from public.member_markets mm
+                where mm.member_id = m.id order by mm.market_id limit 1) as market_id,
+             row_number() over (order by m.sort_order, m.id) as rn
+      from public.members m
+      where m.active
+    ) sub
+    where sub.market_id is not null
   loop
     for m_idx in 0..3 loop
       v_period := ('2026-03-01'::date + (m_idx || ' months')::interval)::date;
@@ -105,9 +89,9 @@ begin
       v_day1   := v_period + 9;   -- 10th
       v_day2   := v_period + 19;  -- 20th
 
-      -- 1st active offer (Karl has none in March → tests the extra-bonus gate).
+      -- 1st active offer (2nd member has none in March → tests the extra-bonus gate).
       v_active := round(14 * rec.strength * v_ramp);
-      if rec.member_id = karl_id and m_idx = 0 then v_active := 0; end if;
+      if rec.rn = 2 and m_idx = 0 then v_active := 0; end if;
 
       -- Count KPIs (all SUM numbers) — split each month's total across two days.
       for k in
@@ -165,4 +149,4 @@ begin
 end $$;
 
 -- Done. Reload the app: Dashboard / Forecast / Activity / Team Bonus now have all 4 months.
--- Note: Karl Tamm has no 1st active offer in March, so his extra bonuses are gated off that month.
+-- Note: each member must have a market assigned (Settings → member) to receive data.
