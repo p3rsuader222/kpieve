@@ -51,8 +51,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
     supabase.from('kpis').select('*').order('sort_order'),
     supabase
       .from('entries')
-      .select('id, kpi_id, member_id, market_id, date, value, target, note, source')
-      .gte('date', cutoff),
+      .select('id, kpi_id, member_id, market_id, date, value, target, note, source'),
     supabase.from('targets').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('bonus_weights').select('member_id, kpi_id, weight'),

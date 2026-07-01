@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays, format, parseISO } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight, Database, Save, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Database, Save, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
   activeKpis,
   activeMembers,
-  entryDaysInMonth,
+  entryActivityInMonth,
+  listPeriods,
   monthStart,
   periodFact,
   periodTarget,
@@ -22,6 +23,8 @@ import { Flag } from '@/components/ui/Flag'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AssortmentEditor } from '@/components/update/AssortmentEditor'
+import { DayDetail, EntryCalendar } from '@/components/update/EntryCalendar'
+import { MonthNav } from '@/components/dashboard/MonthNav'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
 
@@ -35,8 +38,16 @@ export function Update() {
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const period = monthStart(date)
+  // Month the calendar displays — decoupled from `date` so paging through
+  // history doesn't itself swap the day loaded into the edit grid below.
+  const [viewedPeriod, setViewedPeriod] = useState(() => monthStart(date))
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
+
+  function jumpToDate(next: string) {
+    setDate(next)
+    setViewedPeriod(monthStart(next))
+  }
 
   // Assortment is derived from per-seller data (own editor), so it's not a grid cell.
   const kpis = data ? activeKpis(data).filter((k) => k.compute === 'entries') : []
@@ -56,7 +67,14 @@ export function Update() {
   }, [data, date])
 
   const dirtyRows = useMemo(() => collectRows(values, data, date), [values, data, date])
-  const log = useMemo(() => (data ? entryDaysInMonth(data, period) : []), [data, period])
+  const activity = useMemo(
+    () =>
+      data
+        ? entryActivityInMonth(data, viewedPeriod)
+        : new Map<string, { count: number; byKpi: { kpiId: string; count: number }[] }>(),
+    [data, viewedPeriod],
+  )
+  const periods = useMemo(() => (data ? listPeriods(data) : []), [data])
 
   if (isLoading || !data || !activeKpi) return <UpdateSkeleton />
 
@@ -130,7 +148,7 @@ export function Update() {
             <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Day</span>
             <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
               <button
-                onClick={() => setDate(format(addDays(parseISO(date), -1), 'yyyy-MM-dd'))}
+                onClick={() => jumpToDate(format(addDays(parseISO(date), -1), 'yyyy-MM-dd'))}
                 aria-label="Previous day"
                 className="grid h-8 w-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
               >
@@ -140,13 +158,13 @@ export function Update() {
                 type="date"
                 value={date}
                 max={format(new Date(), 'yyyy-MM-dd')}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => jumpToDate(e.target.value)}
                 className="tnum h-8 border-0 bg-transparent px-1 text-sm font-medium text-ink focus:outline-none"
               />
               <button
                 onClick={() => {
                   const next = format(addDays(parseISO(date), 1), 'yyyy-MM-dd')
-                  if (next <= todayStr) setDate(next)
+                  if (next <= todayStr) jumpToDate(next)
                 }}
                 disabled={date >= todayStr}
                 aria-label="Next day"
@@ -162,7 +180,7 @@ export function Update() {
           <Button
             variant="subtle"
             size="md"
-            onClick={() => setDate(todayStr)}
+            onClick={() => jumpToDate(todayStr)}
             disabled={date === todayStr}
             title="Jump to today"
           >
@@ -284,46 +302,45 @@ export function Update() {
           </div>
         </Panel>
 
-        {/* Daily entry log */}
-        <Panel eyebrow={format(parseISO(period), 'MMMM yyyy')} title="Entry log">
-          {log.length === 0 ? (
-            <p className="py-8 text-center text-sm text-ink-muted">No entries this month yet.</p>
-          ) : (
-            <ol className="space-y-1">
-              {log.map((d) => {
-                const selected = d.date === date
-                return (
-                  <li
-                    key={d.date}
-                    className={cn(
-                      'flex items-center gap-1 rounded-lg border pr-1 transition-colors',
-                      selected ? 'border-brand/40 bg-brand-soft' : 'border-transparent hover:bg-surface-2',
-                    )}
-                  >
-                    <button onClick={() => setDate(d.date)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left">
-                      <CalendarDays size={16} className={selected ? 'text-brand' : 'text-ink-muted'} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-ink">{format(parseISO(d.date), 'EEE, d MMM')}</p>
-                        <p className="tnum text-2xs text-ink-muted">{d.count} value{d.count === 1 ? '' : 's'} logged</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => onDeleteDay(d.date)}
-                      aria-label={`Delete entries for ${format(parseISO(d.date), 'd MMM')}`}
-                      title="Delete this day"
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </li>
-                )
-              })}
-            </ol>
-          )}
-          <p className="mt-3 border-t border-line pt-3 text-2xs text-ink-muted">
-            Click a day to view/edit it — clearing a cell and saving removes that value. Use the trash icon to delete a whole day.
-          </p>
-        </Panel>
+        {/* Calendar + day detail — browse full history, jump to any day */}
+        <div className="space-y-5">
+          <Panel
+            eyebrow="Browse history"
+            title="Calendar"
+            actions={
+              <MonthNav
+                period={viewedPeriod}
+                periods={periods}
+                onChange={(p) => setViewedPeriod(periods[0] && p < periods[0] ? periods[0] : p)}
+              />
+            }
+          >
+            <EntryCalendar
+              period={viewedPeriod}
+              activity={activity}
+              selected={date}
+              today={todayStr}
+              onSelect={jumpToDate}
+            />
+          </Panel>
+
+          <Panel
+            eyebrow={format(parseISO(date), 'EEEE')}
+            title={format(parseISO(date), 'd MMM yyyy')}
+            actions={
+              <button
+                onClick={() => onDeleteDay(date)}
+                aria-label={`Delete entries for ${format(parseISO(date), 'd MMM')}`}
+                title="Delete this day"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad"
+              >
+                <Trash2 size={15} />
+              </button>
+            }
+          >
+            <DayDetail data={data} date={date} />
+          </Panel>
+        </div>
       </div>
 
       {/* Per-seller assortment quality (feeds the Planned assortment completeness KPI) */}
@@ -372,7 +389,10 @@ function UpdateSkeleton() {
       </div>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Skeleton className="h-80 rounded-xl lg:col-span-2" />
-        <Skeleton className="h-80 rounded-xl" />
+        <div className="space-y-5">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
+        </div>
       </div>
     </div>
   )
