@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns'
 import { Globe2, Info, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
+import evelinaHero from '@/assets/evelina-hero.png'
 import { activeKpis, listPeriods, monthStart, snapshotsForPeriod, type Granularity } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
 import { Button, buttonClasses } from '@/components/ui/Button'
@@ -99,6 +100,12 @@ export function Dashboard() {
                 {selectedCountry && <span className="text-brand"> · {selectedCountry.name}</span>}
               </h1>
             </div>
+            <img
+              src={evelinaHero}
+              alt=""
+              aria-hidden="true"
+              className="ml-1 hidden h-16 w-16 shrink-0 rounded-2xl border border-line object-cover object-[50%_12%] shadow-card sm:block sm:h-20 sm:w-20"
+            />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <MonthNav period={activePeriod} onChange={setPeriod} periods={periods} />
