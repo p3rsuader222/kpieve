@@ -2,6 +2,7 @@ import { CalendarClock, Coins, LayoutDashboard, LogOut, PencilLine, Settings } f
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/context/AuthContext'
+import evelinaHero from '@/assets/evelina-hero.png'
 import { Logo } from './Logo'
 import { ThemePicker } from './ThemePicker'
 
@@ -56,9 +57,16 @@ function ModeBadge() {
 export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-paper/70 px-3 py-5 backdrop-blur-xl lg:flex">
-      <NavLink to="/" className="mb-7 px-2">
+      <NavLink to="/" className="mb-5 px-2">
         <Logo />
       </NavLink>
+
+      <img
+        src={evelinaHero}
+        alt=""
+        aria-hidden="true"
+        className="mb-6 aspect-square w-full rounded-2xl border border-line object-cover shadow-card"
+      />
 
       <nav className="flex flex-col gap-1">
         {NAV.map(({ to, label, icon: Icon, end }) => (
