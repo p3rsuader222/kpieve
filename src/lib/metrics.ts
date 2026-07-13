@@ -2,6 +2,7 @@ import {
   addDays,
   eachDayOfInterval,
   eachWeekOfInterval,
+  endOfDay,
   endOfMonth,
   format,
   parseISO,
@@ -144,61 +145,76 @@ function bucketEndOf(start: string, granularity: Granularity): string {
   return start
 }
 
-/** Aggregated fact for a single trend bucket (day / week / month). */
+/**
+ * Aggregated fact for a single trend bucket (day / week / month).
+ * `period` names the month being charted — needed for day/week buckets because
+ * week buckets can straddle month boundaries.
+ */
 export function bucketFact(
   data: DashboardData,
   kpi: Kpi,
   start: string,
   granularity: Granularity,
   scope: Pick<EntryFilter, 'memberId' | 'marketId'> = {},
+  period?: string,
 ): number | null {
   // Assortment is a monthly, per-seller derived metric — only meaningful per month.
   if (kpi.compute === 'assortment') {
     return granularity === 'month' ? assortmentFact(data, monthStart(start), scope) : null
   }
-  const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start, end: bucketEndOf(start, granularity) })
-  return aggregate(rows, kpi.aggregation).value
-}
-
-/** Distinct days within `period`'s month that have entries, newest first, with a value count. */
-export function entryDaysInMonth(data: DashboardData, period: string): { date: string; count: number }[] {
-  const end = monthEnd(period)
-  const counts = new Map<string, number>()
-  for (const e of data.entries) {
-    if (e.date >= period && e.date <= end) counts.set(e.date, (counts.get(e.date) ?? 0) + 1)
+  if (granularity === 'month') {
+    const rows = filterEntries(data.entries, { kpiId: kpi.id, ...scope, start, end: bucketEndOf(start, granularity) })
+    return aggregate(rows, kpi.aggregation).value
   }
-  return [...counts.entries()]
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, z) => (a.date < z.date ? 1 : -1))
-}
-
-/** Per-KPI value count logged on a single day. */
-export interface DayKpiCount {
-  kpiId: string
-  count: number
+  // Entries are monthly running totals, so day/week views reconstruct the
+  // month's progression from the change log instead of summing daily rows.
+  return auditSnapshotFact(data, kpi, period ?? monthStart(start), bucketEndOf(start, granularity), scope)
 }
 
 /**
- * Per-day update activity for `period`'s month: how many values were logged on
- * each day, broken down by KPI. Keyed by ISO day (yyyy-MM-dd); only days with at
- * least one entry are present. Use for the activity calendar.
+ * Running-total snapshot at end of `day`: for each (member, market) cell, the
+ * latest logged value for (kpi, month) at or before that moment — summed for
+ * SUM KPIs, averaged for AVG KPIs. Null when nothing was logged yet.
  */
-export function entryActivityInMonth(data: DashboardData, period: string): Map<string, { count: number; byKpi: DayKpiCount[] }> {
-  const end = monthEnd(period)
-  const perDay = new Map<string, Map<string, number>>()
-  for (const e of data.entries) {
-    if (e.date < period || e.date > end) continue
-    let kmap = perDay.get(e.date)
-    if (!kmap) {
-      kmap = new Map()
-      perDay.set(e.date, kmap)
-    }
-    kmap.set(e.kpi_id, (kmap.get(e.kpi_id) ?? 0) + 1)
+function auditSnapshotFact(
+  data: DashboardData,
+  kpi: Kpi,
+  month: string,
+  day: string,
+  scope: Pick<EntryFilter, 'memberId' | 'marketId'>,
+): number | null {
+  const cutoff = endOfDay(parseISO(day))
+  const latest = new Map<string, number | null>()
+  // entryAudit is ordered by changed_at ascending, so the last write per cell wins.
+  for (const a of data.entryAudit) {
+    if (a.kpi_id !== kpi.id || a.period !== month) continue
+    if (scope.memberId !== undefined && a.member_id !== scope.memberId) continue
+    if (scope.marketId !== undefined && a.market_id !== scope.marketId) continue
+    if (new Date(a.changed_at) > cutoff) continue
+    latest.set(`${a.member_id}:${a.market_id}`, a.new_value)
   }
-  const out = new Map<string, { count: number; byKpi: DayKpiCount[] }>()
-  for (const [date, kmap] of perDay) {
-    const byKpi = [...kmap.entries()].map(([kpiId, count]) => ({ kpiId, count }))
-    out.set(date, { count: byKpi.reduce((s, k) => s + k.count, 0), byKpi })
+  const vals = [...latest.values()].filter((v): v is number => v != null)
+  if (vals.length === 0) return null
+  const sum = vals.reduce((s, v) => s + v, 0)
+  return kpi.aggregation === 'sum' ? sum : sum / vals.length
+}
+
+/** Local calendar day (yyyy-MM-dd) an audit change happened on. */
+export function changeDay(changedAt: string): string {
+  return format(new Date(changedAt), 'yyyy-MM-dd')
+}
+
+/**
+ * Per-day CHANGE activity for `period`'s month: how many value changes were
+ * recorded on each local day. Keyed by ISO day; only days with at least one
+ * change are present. Feeds the change-log calendar.
+ */
+export function changeActivityInMonth(data: DashboardData, period: string): Map<string, number> {
+  const end = monthEnd(period)
+  const out = new Map<string, number>()
+  for (const a of data.entryAudit) {
+    const day = changeDay(a.changed_at)
+    if (day >= period && day <= end) out.set(day, (out.get(day) ?? 0) + 1)
   }
   return out
 }

@@ -6,6 +6,7 @@ import type {
   BonusWeight,
   DashboardData,
   Entry,
+  EntryChange,
   Forecast,
   Kpi,
   KpiMarketConfig,
@@ -42,7 +43,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
   const cutoff = format(subDays(new Date(), HISTORY_DAYS), 'yyyy-MM-dd')
 
   const [
-    markets, members, memberMarkets, kpis, entries, targets, forecasts, bonusWeights, bonusSettings,
+    markets, members, memberMarkets, kpis, entries, entryAudit, targets, forecasts, bonusWeights, bonusSettings,
     kpiMarketConfig, bonusBase, assortmentSellers,
   ] = await Promise.all([
     supabase.from('markets').select('id, code, name, sort_order').order('sort_order'),
@@ -52,6 +53,10 @@ export async function fetchDashboard(): Promise<DashboardData> {
     supabase
       .from('entries')
       .select('id, kpi_id, member_id, market_id, date, value, target, note, source'),
+    supabase
+      .from('entry_audit')
+      .select('id, kpi_id, member_id, market_id, period, old_value, new_value, changed_at')
+      .order('changed_at', { ascending: true }),
     supabase.from('targets').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('bonus_weights').select('member_id, kpi_id, weight'),
@@ -65,8 +70,8 @@ export async function fetchDashboard(): Promise<DashboardData> {
   ])
 
   const err =
-    markets.error || members.error || memberMarkets.error || kpis.error || entries.error || targets.error ||
-    forecasts.error || bonusWeights.error || bonusSettings.error ||
+    markets.error || members.error || memberMarkets.error || kpis.error || entries.error || entryAudit.error ||
+    targets.error || forecasts.error || bonusWeights.error || bonusSettings.error ||
     kpiMarketConfig.error || bonusBase.error || assortmentSellers.error
   if (err) throw err
 
@@ -87,6 +92,13 @@ export async function fetchDashboard(): Promise<DashboardData> {
     ),
     entries: (entries.data ?? []).map(
       (e): Entry => ({ ...e, value: Number(e.value), target: e.target == null ? null : Number(e.target) }),
+    ),
+    entryAudit: (entryAudit.data ?? []).map(
+      (a): EntryChange => ({
+        ...a,
+        old_value: a.old_value == null ? null : Number(a.old_value),
+        new_value: a.new_value == null ? null : Number(a.new_value),
+      }),
     ),
     targets: (targets.data ?? []).map(
       (t): Target => ({ ...t, value: Number(t.value) }),
@@ -161,13 +173,6 @@ export async function deleteEntries(keys: EntryKey[]): Promise<void> {
       .eq('date', k.date)
     if (error) throw error
   }
-}
-
-/** Delete every entry logged on a given day. */
-export async function deleteEntriesForDate(date: string): Promise<void> {
-  const client = requireClient()
-  const { error } = await client.from('entries').delete().eq('date', date)
-  if (error) throw error
 }
 
 export interface TargetUpsert {

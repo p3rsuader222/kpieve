@@ -54,11 +54,26 @@ export interface Entry {
   kpi_id: string
   member_id: string | null
   market_id: string | null
-  date: string // ISO yyyy-MM-dd
-  value: number
+  date: string // month start (yyyy-MM-01) — one row per kpi/member/market/month
+  value: number // the month's running total, overwritten as it grows
   target: number | null
   note: string | null
   source: EntrySource
+}
+
+/**
+ * One recorded change to an entry value (from the entry_audit table, written by
+ * a DB trigger). old_value null → value created; new_value null → value removed.
+ */
+export interface EntryChange {
+  id: string
+  kpi_id: string
+  member_id: string | null
+  market_id: string | null
+  period: string // month start of the affected entry, yyyy-MM-01
+  old_value: number | null
+  new_value: number | null
+  changed_at: string // ISO timestamp
 }
 
 /**
@@ -144,6 +159,7 @@ export interface DashboardData {
   members: Member[]
   kpis: Kpi[]
   entries: Entry[]
+  entryAudit: EntryChange[]
   targets: Target[]
   forecasts: Forecast[]
   bonusWeights: BonusWeight[]

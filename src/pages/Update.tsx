@@ -1,21 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { addDays, format, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Database, Save, Trash2 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { Database, Save } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
   activeKpis,
   activeMembers,
-  entryActivityInMonth,
+  changeActivityInMonth,
   listPeriods,
   monthStart,
-  periodFact,
   periodTarget,
 } from '@/lib/metrics'
 import { formatCompact } from '@/lib/format'
 import type { DashboardData, Kpi } from '@/lib/types'
 import { usingMockData, type EntryKey, type EntryUpsert } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
-import { useDeleteEntries, useDeleteEntriesForDate, useUpsertEntries } from '@/hooks/useEntryMutations'
+import { useDeleteEntries, useUpsertEntries } from '@/hooks/useEntryMutations'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -23,7 +22,7 @@ import { Flag } from '@/components/ui/Flag'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AssortmentEditor } from '@/components/update/AssortmentEditor'
-import { DayDetail, EntryCalendar } from '@/components/update/EntryCalendar'
+import { ChangeDetail, EntryCalendar } from '@/components/update/EntryCalendar'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
@@ -32,49 +31,51 @@ export function Update() {
   const { data, isLoading } = useDashboard()
   const upsert = useUpsertEntries()
   const deleteCells = useDeleteEntries()
-  const deleteDay = useDeleteEntriesForDate()
   const toast = useToast()
 
-  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const period = monthStart(date)
-  // Month the calendar displays — decoupled from `date` so paging through
-  // history doesn't itself swap the day loaded into the edit grid below.
-  const [viewedPeriod, setViewedPeriod] = useState(() => monthStart(date))
+  const curMonth = monthStart(new Date())
+  // Month whose running totals are being edited in the grid.
+  const [period, setPeriod] = useState(curMonth)
+  // Month the change-log calendar displays — browsed independently of the grid.
+  const [viewedPeriod, setViewedPeriod] = useState(curMonth)
+  // Day whose changes are shown in the detail panel.
+  const [selectedDay, setSelectedDay] = useState(todayStr)
   const [values, setValues] = useState<Record<string, string>>({})
   const [activeKpiId, setActiveKpiId] = useState<string | null>(null)
 
-  function jumpToDate(next: string) {
-    setDate(next)
-    setViewedPeriod(monthStart(next))
-  }
-
-  // Assortment is derived from per-seller data (own editor), so it's not a grid cell.
+  // Assortment-compute KPIs are derived from per-seller data (own editor), so they're not grid cells.
   const kpis = data ? activeKpis(data).filter((k) => k.compute === 'entries') : []
+  const assortmentKpi = data ? activeKpis(data).find((k) => k.compute === 'assortment') : undefined
   const members = data ? activeMembers(data) : []
   const activeKpi = kpis.find((k) => k.id === activeKpiId) ?? kpis[0]
 
-  // Prefill from entries already saved for the chosen day.
+  // Prefill from the month's saved running totals.
   useEffect(() => {
     if (!data) return
     const next: Record<string, string> = {}
     for (const e of data.entries) {
-      if (e.date === date && e.member_id && e.market_id) {
+      if (e.date === period && e.member_id && e.market_id) {
         next[keyOf(e.kpi_id, e.member_id, e.market_id)] = String(e.value)
       }
     }
     setValues(next)
-  }, [data, date])
+  }, [data, period])
 
-  const dirtyRows = useMemo(() => collectRows(values, data, date), [values, data, date])
+  const dirtyRows = useMemo(() => collectRows(values, data, period), [values, data, period])
   const activity = useMemo(
-    () =>
-      data
-        ? entryActivityInMonth(data, viewedPeriod)
-        : new Map<string, { count: number; byKpi: { kpiId: string; count: number }[] }>(),
+    () => (data ? changeActivityInMonth(data, viewedPeriod) : new Map<string, number>()),
     [data, viewedPeriod],
   )
-  const periods = useMemo(() => (data ? listPeriods(data) : []), [data])
+  // Months browsable in the change-log calendar: every month with data, plus the
+  // current one. (listPeriods can contain FUTURE months once forecast targets are
+  // saved — filter those out so the forward clamp stays at the current month.)
+  const calPeriods = useMemo(() => {
+    if (!data) return [curMonth]
+    const set = new Set(listPeriods(data).filter((p) => p <= curMonth))
+    set.add(curMonth)
+    return [...set].sort()
+  }, [data, curMonth])
 
   if (isLoading || !data || !activeKpi) return <UpdateSkeleton />
 
@@ -91,13 +92,13 @@ export function Update() {
       toast.info('Demo mode — connect Supabase to save entries.')
       return
     }
-    // Cells that had a saved value for this day but were cleared → delete them.
+    // Cells that had a saved total for this month but were cleared → delete them.
     const cleared: EntryKey[] = []
     for (const e of data.entries) {
-      if (e.date === date && e.member_id && e.market_id) {
+      if (e.date === period && e.member_id && e.market_id) {
         const v = values[keyOf(e.kpi_id, e.member_id, e.market_id)]
         if (v == null || v.trim() === '') {
-          cleared.push({ kpi_id: e.kpi_id, member_id: e.member_id, market_id: e.market_id, date })
+          cleared.push({ kpi_id: e.kpi_id, member_id: e.member_id, market_id: e.market_id, date: period })
         }
       }
     }
@@ -111,23 +112,9 @@ export function Update() {
       const parts: string[] = []
       if (dirtyRows.length) parts.push(`saved ${dirtyRows.length}`)
       if (cleared.length) parts.push(`removed ${cleared.length}`)
-      toast.success(`${parts.join(' · ')} for ${format(parseISO(date), 'd MMM')}.`)
+      toast.success(`${parts.join(' · ')} for ${format(parseISO(period), 'MMMM yyyy')}.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed.')
-    }
-  }
-
-  async function onDeleteDay(day: string) {
-    if (usingMockData) {
-      toast.info('Demo mode — connect Supabase to edit entries.')
-      return
-    }
-    if (!window.confirm(`Delete all entries logged on ${format(parseISO(day), 'd MMM yyyy')}?`)) return
-    try {
-      await deleteDay.mutateAsync(day)
-      toast.success(`Deleted entries for ${format(parseISO(day), 'd MMM')}.`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Delete failed.')
     }
   }
 
@@ -139,53 +126,20 @@ export function Update() {
     <div className="max-w-[1120px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Daily entry</p>
+          <p className="eyebrow">Monthly totals</p>
           <h1 className="mt-1.5 font-heading text-3xl font-semibold tracking-tight text-ink">Update KPIs</h1>
-          <p className="mt-2 text-sm text-ink-muted">Log each member's numbers for the day — progress rolls up to the month.</p>
+          <p className="mt-2 text-sm text-ink-muted">
+            Enter each member's running total for the month — overwrite the number whenever it grows.
+          </p>
         </div>
         <div className="flex items-end gap-2.5">
           <div>
-            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Day</span>
-            <div className="flex items-center gap-1 rounded-xl border border-line-strong bg-surface p-1">
-              <button
-                onClick={() => jumpToDate(format(addDays(parseISO(date), -1), 'yyyy-MM-dd'))}
-                aria-label="Previous day"
-                className="grid h-8 w-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-              >
-                <ChevronLeft size={17} strokeWidth={2.2} />
-              </button>
-              <input
-                type="date"
-                value={date}
-                max={format(new Date(), 'yyyy-MM-dd')}
-                onChange={(e) => jumpToDate(e.target.value)}
-                className="tnum h-8 border-0 bg-transparent px-1 text-sm font-medium text-ink focus:outline-none"
-              />
-              <button
-                onClick={() => {
-                  const next = format(addDays(parseISO(date), 1), 'yyyy-MM-dd')
-                  if (next <= todayStr) jumpToDate(next)
-                }}
-                disabled={date >= todayStr}
-                aria-label="Next day"
-                className={cn(
-                  'grid h-8 w-8 place-items-center rounded-lg transition-colors',
-                  date >= todayStr ? 'cursor-not-allowed text-ink-muted/40' : 'text-ink-muted hover:bg-surface-2 hover:text-ink',
-                )}
-              >
-                <ChevronRight size={17} strokeWidth={2.2} />
-              </button>
-            </div>
+            <span className="mb-1.5 block text-xs font-semibold text-ink-soft">Month</span>
+            {/* Forward clamp pinned to the current month (listPeriods may contain
+                future months once next month's targets are saved). Past months
+                stay freely reachable for corrections. */}
+            <MonthNav period={period} onChange={setPeriod} periods={[curMonth]} />
           </div>
-          <Button
-            variant="subtle"
-            size="md"
-            onClick={() => jumpToDate(todayStr)}
-            disabled={date === todayStr}
-            title="Jump to today"
-          >
-            Today
-          </Button>
           <Button variant="primary" size="md" onClick={onSave} disabled={upsert.isPending || deleteCells.isPending}>
             <Save size={16} />
             {upsert.isPending || deleteCells.isPending ? 'Saving…' : 'Save all'}
@@ -207,7 +161,7 @@ export function Update() {
         {/* Entry grid */}
         <Panel
           className="lg:col-span-2"
-          eyebrow={`${format(parseISO(date), 'EEEE, d MMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
+          eyebrow={`${format(parseISO(period), 'MMMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
           title={activeKpi.name}
         >
           {/* KPI selector — its own island */}
@@ -238,7 +192,6 @@ export function Update() {
                 <span className="eyebrow self-end">Member</span>
                 {markets.map((m) => {
                   const t = periodTarget(data, activeKpi.id, m.id, period)
-                  const mtd = periodFact(data, activeKpi, period, { marketId: m.id })
                   const cfg = data.kpiMarketConfig.find(
                     (c) => c.period === period && c.market_id === m.id && c.kpi_id === activeKpi.id,
                   )
@@ -253,8 +206,6 @@ export function Update() {
                       ) : (
                         <span className="tnum text-2xs leading-tight text-ink-muted/80">
                           tgt {t != null ? formatCompact(t, activeKpi.format) : '—'}
-                          {' · '}
-                          {mtd != null ? formatCompact(mtd, activeKpi.format) : '0'} so far
                         </span>
                       )}
                     </div>
@@ -302,54 +253,46 @@ export function Update() {
           </div>
         </Panel>
 
-        {/* Calendar + day detail — browse full history, jump to any day */}
+        {/* Change log — when totals were edited, and what changed each day */}
         <div className="space-y-5">
           <Panel
-            eyebrow="Browse history"
-            title="Calendar"
+            eyebrow="When totals changed"
+            title="Change log"
             actions={
               <MonthNav
                 period={viewedPeriod}
-                periods={periods}
-                onChange={(p) => setViewedPeriod(periods[0] && p < periods[0] ? periods[0] : p)}
+                periods={calPeriods}
+                onChange={(p) => setViewedPeriod(calPeriods[0] && p < calPeriods[0] ? calPeriods[0] : p)}
               />
             }
           >
             <EntryCalendar
               period={viewedPeriod}
               activity={activity}
-              selected={date}
+              selected={selectedDay}
               today={todayStr}
-              onSelect={jumpToDate}
+              onSelect={setSelectedDay}
             />
           </Panel>
 
           <Panel
-            eyebrow={format(parseISO(date), 'EEEE')}
-            title={format(parseISO(date), 'd MMM yyyy')}
-            actions={
-              <button
-                onClick={() => onDeleteDay(date)}
-                aria-label={`Delete entries for ${format(parseISO(date), 'd MMM')}`}
-                title="Delete this day"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-bad-soft hover:text-bad"
-              >
-                <Trash2 size={15} />
-              </button>
-            }
+            eyebrow={format(parseISO(selectedDay), 'EEEE')}
+            title={format(parseISO(selectedDay), 'd MMM yyyy')}
           >
-            <DayDetail data={data} date={date} />
+            <ChangeDetail data={data} date={selectedDay} />
           </Panel>
         </div>
       </div>
 
-      {/* Per-seller assortment quality (feeds the Planned assortment completeness KPI) */}
-      <Panel
-        eyebrow={`Assortment quality · ${format(parseISO(period), 'MMMM yyyy')}`}
-        title="Planned assortment completeness"
-      >
-        <AssortmentEditor data={data} period={period} />
-      </Panel>
+      {/* Per-seller assortment quality — only shown while a KPI is actually derived from it. */}
+      {assortmentKpi && (
+        <Panel
+          eyebrow={`Assortment quality · ${format(parseISO(period), 'MMMM yyyy')}`}
+          title={assortmentKpi.name}
+        >
+          <AssortmentEditor data={data} period={period} />
+        </Panel>
+      )}
     </div>
   )
 }
@@ -357,7 +300,7 @@ export function Update() {
 function collectRows(
   values: Record<string, string>,
   data: DashboardData | undefined,
-  date: string,
+  period: string,
 ): EntryUpsert[] {
   if (!data) return []
   const kpiById = new Map<string, Kpi>(data.kpis.map((k) => [k.id, k]))
@@ -372,7 +315,7 @@ function collectRows(
       kpi_id,
       member_id,
       market_id,
-      date, // a real day (yyyy-MM-dd); rolls up to the month in the engine
+      date: period, // month start (yyyy-MM-01) — one running total per cell per month
       value: num,
       target: null,
     })

@@ -7,6 +7,7 @@ import type {
   BonusWeight,
   DashboardData,
   Entry,
+  EntryChange,
   Forecast,
   Kpi,
   KpiMarketConfig,
@@ -90,7 +91,7 @@ const PASS_RATE: Record<string, number> = { 'mem-1': 0.8, 'mem-2': 0.6, 'mem-3':
 
 const MONTHS_BACK = 3 // → 4 months of history including the current month
 
-/** Day-of-month cadence Evelina enters updates on (used to scatter daily mock entries). */
+/** Day-of-month cadence Evelina updates the running totals on (drives the mock change log). */
 const CADENCE = [4, 9, 14, 19, 24, 28]
 
 function round(n: number, decimals: number) {
@@ -104,7 +105,8 @@ function coveringMembers(marketId: string): Member[] {
 }
 
 /**
- * Build a full, deterministic mock dataset of ~4 months of DAILY entries plus the
+ * Build a full, deterministic mock dataset: ~4 months of MONTHLY running totals
+ * (one entry per kpi/member/market/month) with a synthesized change log, plus the
  * per-market bonus plan and per-seller assortment data for the quality overhaul.
  */
 export function buildMockData(): DashboardData {
@@ -123,8 +125,27 @@ export function buildMockData(): DashboardData {
   }
 
   const entries: Entry[] = []
+  const entryAudit: EntryChange[] = []
   const targets: Target[] = []
   let id = 0
+  let auditId = 0
+
+  /** Log one change event and return the new running value. */
+  function logChange(
+    kpiId: string, memberId: string, marketId: string, period: string,
+    date: string, di: number, oldValue: number | null, newValue: number,
+  ) {
+    entryAudit.push({
+      id: `a${auditId++}`,
+      kpi_id: kpiId,
+      member_id: memberId,
+      market_id: marketId,
+      period,
+      old_value: oldValue,
+      new_value: newValue,
+      changed_at: `${date}T${String(9 + di).padStart(2, '0')}:1${di}:00`,
+    })
+  }
 
   for (const kpi of KPIS) {
     if (kpi.compute !== 'entries') continue // assortment is derived from sellers, not entries
@@ -153,25 +174,38 @@ export function buildMockData(): DashboardData {
         const prefix = period.slice(0, 7) // yyyy-MM
         for (const member of members) {
           const s = skill[`${member.id}:${market.id}`]
+          // The running total climbs (sum KPIs) or wobbles (avg KPIs) across the
+          // cadence days; each step is one change-log event, and the month's
+          // entry holds the LAST value reached.
+          let running: number | null = null
 
           if (isSum) {
             const share = countryTarget / n
             const monthTotal = Math.max(0, Math.round(share * factor * (1 + s * 0.4)))
             const perDay = new Array(CADENCE.length).fill(0)
             for (let u = 0; u < monthTotal; u++) perDay[u % CADENCE.length]++
+            let cumulative = 0
             CADENCE.forEach((day, di) => {
               const date = `${prefix}-${String(day).padStart(2, '0')}`
+              cumulative += perDay[di]
               if (date > todayStr || perDay[di] === 0) return
-              entries.push({ id: `e${id++}`, kpi_id: kpi.id, member_id: member.id, market_id: market.id, date, value: perDay[di], target: null, note: null, source: 'manual' })
+              logChange(kpi.id, member.id, market.id, period, date, di, running, cumulative)
+              running = cumulative
             })
           } else {
-            CADENCE.forEach((day) => {
+            CADENCE.forEach((day, di) => {
               const date = `${prefix}-${String(day).padStart(2, '0')}`
               if (date > todayStr) return
               const dayWobble = 1 + (rng() - 0.5) * 0.18
               const value = Math.max(0, round(countryTarget * factor * (1 + s * 0.3) * dayWobble, decimals))
-              entries.push({ id: `e${id++}`, kpi_id: kpi.id, member_id: member.id, market_id: market.id, date, value, target: null, note: null, source: 'manual' })
+              if (value === running) return
+              logChange(kpi.id, member.id, market.id, period, date, di, running, value)
+              running = value
             })
+          }
+
+          if (running != null) {
+            entries.push({ id: `e${id++}`, kpi_id: kpi.id, member_id: member.id, market_id: market.id, date: period, value: running, target: null, note: null, source: 'manual' })
           }
         }
       })
@@ -227,11 +261,15 @@ export function buildMockData(): DashboardData {
   const bonusWeights: BonusWeight[] = []
   const bonusSettings: BonusSetting[] = MEMBERS.map((m) => ({ member_id: m.id, max_bonus: MAX_BONUS[m.id] ?? 1000 }))
 
+  // The live table arrives ordered by changed_at — the metrics engine relies on it.
+  entryAudit.sort((a, z) => (a.changed_at < z.changed_at ? -1 : a.changed_at > z.changed_at ? 1 : 0))
+
   return {
     markets: MARKETS,
     members: MEMBERS,
     kpis: KPIS,
     entries,
+    entryAudit,
     targets,
     forecasts,
     bonusWeights,

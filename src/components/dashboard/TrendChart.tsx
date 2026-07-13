@@ -57,19 +57,19 @@ export function TrendChart({ data, kpi, splitBy, granularity, period, marketId }
     let series: SeriesDef[] = []
 
     if (splitBy === 'none') {
-      buckets.forEach((b) => (rowMap.get(b)!.value = bucketFact(data, kpi, b, granularity, marketId ? { marketId } : {})))
+      buckets.forEach((b) => (rowMap.get(b)!.value = bucketFact(data, kpi, b, granularity, marketId ? { marketId } : {}, period)))
       series = [{ key: 'value', label: kpi.name, color: c.brand }]
     } else if (splitBy === 'market') {
       data.markets
         .slice()
         .sort((a, z) => a.sort_order - z.sort_order)
         .forEach((m, i) => {
-          buckets.forEach((b) => (rowMap.get(b)![`m_${m.id}`] = bucketFact(data, kpi, b, granularity, { marketId: m.id })))
+          buckets.forEach((b) => (rowMap.get(b)![`m_${m.id}`] = bucketFact(data, kpi, b, granularity, { marketId: m.id }, period)))
           series.push({ key: `m_${m.id}`, label: m.code, color: MARKET_COLORS[i % MARKET_COLORS.length] })
         })
     } else {
       activeMembers(data).forEach((m) => {
-        buckets.forEach((b) => (rowMap.get(b)![`u_${m.id}`] = bucketFact(data, kpi, b, granularity, { memberId: m.id })))
+        buckets.forEach((b) => (rowMap.get(b)![`u_${m.id}`] = bucketFact(data, kpi, b, granularity, { memberId: m.id }, period)))
         series.push({ key: `u_${m.id}`, label: m.initials, color: m.color })
       })
     }

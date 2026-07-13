@@ -9,9 +9,11 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
+import { MoveRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { changeDay } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
-import type { DashboardData } from '@/lib/types'
+import type { DashboardData, EntryChange } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 import { Flag } from '@/components/ui/Flag'
 
@@ -19,13 +21,14 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 interface EntryCalendarProps {
   period: string
-  activity: Map<string, { count: number; byKpi: { kpiId: string; count: number }[] }>
+  /** Change count per local day (yyyy-MM-dd) — see changeActivityInMonth. */
+  activity: Map<string, number>
   selected: string
   today: string
   onSelect: (date: string) => void
 }
 
-/** One month's day grid — every day is shown and clickable (not just populated ones). */
+/** One month's day grid — every day is shown and clickable (not just active ones). */
 export function EntryCalendar({ period, activity, selected, today, onSelect }: EntryCalendarProps) {
   const first = parseISO(period)
   const gridStart = startOfWeek(startOfMonth(first), { weekStartsOn: 1 })
@@ -42,8 +45,7 @@ export function EntryCalendar({ period, activity, selected, today, onSelect }: E
       {days.map((day) => {
         const dateStr = format(day, 'yyyy-MM-dd')
         const inMonth = isSameMonth(day, first)
-        const entry = activity.get(dateStr)
-        const count = entry?.count ?? 0
+        const count = activity.get(dateStr) ?? 0
         const isToday = dateStr === today
         const isSelected = dateStr === selected
         const isFuture = dateStr > today
@@ -75,10 +77,10 @@ export function EntryCalendar({ period, activity, selected, today, onSelect }: E
             </span>
             {count > 0 ? (
               <span className="tnum rounded-full bg-brand px-1.5 text-2xs font-bold leading-tight text-brand-contrast">
-                +{count}
+                {count}
               </span>
             ) : (
-              <span className="tnum text-2xs leading-tight text-ink-muted/40">0</span>
+              <span className="tnum text-2xs leading-tight text-ink-muted/40">·</span>
             )}
           </button>
         )
@@ -87,49 +89,53 @@ export function EntryCalendar({ period, activity, selected, today, onSelect }: E
   )
 }
 
-/** Per-KPI/member/market breakdown of everything logged on one day. */
-export function DayDetail({ data, date }: { data: DashboardData; date: string }) {
+/** Everything that changed on one day: per KPI, who changed which total from → to. */
+export function ChangeDetail({ data, date }: { data: DashboardData; date: string }) {
   const kpiById = useMemo(() => new Map(data.kpis.map((k) => [k.id, k])), [data.kpis])
   const memberById = useMemo(() => new Map(data.members.map((m) => [m.id, m])), [data.members])
   const marketById = useMemo(() => new Map(data.markets.map((m) => [m.id, m])), [data.markets])
 
-  const dayEntries = useMemo(() => data.entries.filter((e) => e.date === date), [data.entries, date])
+  // entryAudit is chronological, so groups keep within-day order.
+  const dayChanges = useMemo(
+    () => data.entryAudit.filter((a) => changeDay(a.changed_at) === date),
+    [data.entryAudit, date],
+  )
   const groups = useMemo(() => {
-    const byKpi = new Map<string, typeof dayEntries>()
-    for (const e of dayEntries) {
-      const arr = byKpi.get(e.kpi_id) ?? []
-      arr.push(e)
-      byKpi.set(e.kpi_id, arr)
+    const byKpi = new Map<string, EntryChange[]>()
+    for (const a of dayChanges) {
+      const arr = byKpi.get(a.kpi_id) ?? []
+      arr.push(a)
+      byKpi.set(a.kpi_id, arr)
     }
     return [...byKpi.entries()]
       .map(([kpiId, rows]) => ({ kpi: kpiById.get(kpiId), rows }))
       .filter((g) => g.kpi)
       .sort((a, z) => (a.kpi!.sort_order ?? 0) - (z.kpi!.sort_order ?? 0))
-  }, [dayEntries, kpiById])
+  }, [dayChanges, kpiById])
 
-  if (dayEntries.length === 0) {
-    return <p className="py-8 text-center text-sm text-ink-muted">No KPI values logged on this day.</p>
+  if (dayChanges.length === 0) {
+    return <p className="py-8 text-center text-sm text-ink-muted">No changes logged on this day.</p>
   }
 
   return (
     <div className="space-y-4">
       <p className="text-2xs text-ink-muted">
-        {dayEntries.length} value{dayEntries.length === 1 ? '' : 's'} across {groups.length} KPI
+        {dayChanges.length} change{dayChanges.length === 1 ? '' : 's'} across {groups.length} KPI
         {groups.length === 1 ? '' : 's'}.
       </p>
       {groups.map(({ kpi, rows }) => (
         <div key={kpi!.id}>
           <div className="mb-1.5 flex items-baseline justify-between gap-2">
             <span className="truncate text-sm font-semibold text-ink">{kpi!.name}</span>
-            <span className="chip shrink-0">{rows.length} value{rows.length === 1 ? '' : 's'}</span>
+            <span className="chip shrink-0">{rows.length} change{rows.length === 1 ? '' : 's'}</span>
           </div>
           <ul className="space-y-1">
-            {rows.map((e) => {
-              const member = e.member_id ? memberById.get(e.member_id) : null
-              const market = e.market_id ? marketById.get(e.market_id) : null
+            {rows.map((a) => {
+              const member = a.member_id ? memberById.get(a.member_id) : null
+              const market = a.market_id ? marketById.get(a.market_id) : null
               return (
                 <li
-                  key={e.id}
+                  key={a.id}
                   className="flex items-center gap-2 rounded-lg bg-surface-2/40 px-2.5 py-1.5"
                 >
                   {member && (
@@ -139,7 +145,24 @@ export function DayDetail({ data, date }: { data: DashboardData; date: string })
                     {member?.name ?? 'Team'}
                   </span>
                   {market && <Flag code={market.code} size={16} />}
-                  <span className="tnum text-sm font-semibold text-ink">{formatValue(e.value, kpi!)}</span>
+                  <span className="tnum flex shrink-0 items-center gap-1 text-sm font-semibold text-ink">
+                    {a.old_value != null && (
+                      <>
+                        <span className="font-medium text-ink-muted line-through decoration-ink-muted/50">
+                          {formatValue(a.old_value, kpi!)}
+                        </span>
+                        <MoveRight size={12} className="text-ink-muted" />
+                      </>
+                    )}
+                    {a.new_value != null ? (
+                      formatValue(a.new_value, kpi!)
+                    ) : (
+                      <span className="font-medium text-bad">removed</span>
+                    )}
+                  </span>
+                  <span className="tnum shrink-0 text-2xs text-ink-muted">
+                    {format(new Date(a.changed_at), 'HH:mm')}
+                  </span>
                 </li>
               )
             })}
