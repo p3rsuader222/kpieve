@@ -11,9 +11,9 @@ import {
 } from 'date-fns'
 import { MoveRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { changeDay } from '@/lib/metrics'
+import { monthStart, netChanges, type NetChange } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
-import type { DashboardData, EntryChange } from '@/lib/types'
+import type { DashboardData } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 import { Flag } from '@/components/ui/Flag'
 
@@ -89,23 +89,23 @@ export function EntryCalendar({ period, activity, selected, today, onSelect }: E
   )
 }
 
-/** Everything that changed on one day: per KPI, who changed which total from → to. */
+/** Everything that NET-changed on one day: per KPI, who changed which total from → to. */
 export function ChangeDetail({ data, date }: { data: DashboardData; date: string }) {
   const kpiById = useMemo(() => new Map(data.kpis.map((k) => [k.id, k])), [data.kpis])
   const memberById = useMemo(() => new Map(data.members.map((m) => [m.id, m])), [data.members])
   const marketById = useMemo(() => new Map(data.markets.map((m) => [m.id, m])), [data.markets])
 
-  // entryAudit is chronological, so groups keep within-day order.
+  // Same-cell edits within the day are already collapsed to first → last.
   const dayChanges = useMemo(
-    () => data.entryAudit.filter((a) => changeDay(a.changed_at) === date),
-    [data.entryAudit, date],
+    () => netChanges(data).filter((c) => c.day === date),
+    [data, date],
   )
   const groups = useMemo(() => {
-    const byKpi = new Map<string, EntryChange[]>()
-    for (const a of dayChanges) {
-      const arr = byKpi.get(a.kpi_id) ?? []
-      arr.push(a)
-      byKpi.set(a.kpi_id, arr)
+    const byKpi = new Map<string, NetChange[]>()
+    for (const c of dayChanges) {
+      const arr = byKpi.get(c.kpi_id) ?? []
+      arr.push(c)
+      byKpi.set(c.kpi_id, arr)
     }
     return [...byKpi.entries()]
       .map(([kpiId, rows]) => ({ kpi: kpiById.get(kpiId), rows }))
@@ -130,12 +130,12 @@ export function ChangeDetail({ data, date }: { data: DashboardData; date: string
             <span className="chip shrink-0">{rows.length} change{rows.length === 1 ? '' : 's'}</span>
           </div>
           <ul className="space-y-1">
-            {rows.map((a) => {
-              const member = a.member_id ? memberById.get(a.member_id) : null
-              const market = a.market_id ? marketById.get(a.market_id) : null
+            {rows.map((c) => {
+              const member = c.member_id ? memberById.get(c.member_id) : null
+              const market = c.market_id ? marketById.get(c.market_id) : null
               return (
                 <li
-                  key={a.id}
+                  key={`${c.kpi_id}:${c.member_id}:${c.market_id}:${c.period}`}
                   className="flex items-center gap-2 rounded-lg bg-surface-2/40 px-2.5 py-1.5"
                 >
                   {member && (
@@ -144,24 +144,28 @@ export function ChangeDetail({ data, date }: { data: DashboardData; date: string
                   <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">
                     {member?.name ?? 'Team'}
                   </span>
+                  {/* Corrections to another month's total are tagged with that month. */}
+                  {c.period !== monthStart(c.day) && (
+                    <span className="chip shrink-0">{format(parseISO(c.period), 'MMM')}</span>
+                  )}
                   {market && <Flag code={market.code} size={16} />}
                   <span className="tnum flex shrink-0 items-center gap-1 text-sm font-semibold text-ink">
-                    {a.old_value != null && (
+                    {c.old_value != null && (
                       <>
                         <span className="font-medium text-ink-muted line-through decoration-ink-muted/50">
-                          {formatValue(a.old_value, kpi!)}
+                          {formatValue(c.old_value, kpi!)}
                         </span>
                         <MoveRight size={12} className="text-ink-muted" />
                       </>
                     )}
-                    {a.new_value != null ? (
-                      formatValue(a.new_value, kpi!)
+                    {c.new_value != null ? (
+                      formatValue(c.new_value, kpi!)
                     ) : (
                       <span className="font-medium text-bad">removed</span>
                     )}
                   </span>
                   <span className="tnum shrink-0 text-2xs text-ink-muted">
-                    {format(new Date(a.changed_at), 'HH:mm')}
+                    {format(new Date(c.changed_at), 'HH:mm')}
                   </span>
                 </li>
               )

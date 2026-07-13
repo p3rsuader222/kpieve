@@ -204,17 +204,60 @@ export function changeDay(changedAt: string): string {
   return format(new Date(changedAt), 'yyyy-MM-dd')
 }
 
+/** One cell's NET change over one local day: first old value → last new value. */
+export interface NetChange {
+  kpi_id: string
+  member_id: string | null
+  market_id: string | null
+  period: string // month the edited entry belongs to
+  day: string // local yyyy-MM-dd the edits happened on
+  old_value: number | null
+  new_value: number | null
+  changed_at: string // last edit that day
+}
+
 /**
- * Per-day CHANGE activity for `period`'s month: how many value changes were
- * recorded on each local day. Keyed by ISO day; only days with at least one
- * change are present. Feeds the change-log calendar.
+ * The change log as Eve reads it: repeated edits to the same cell within one
+ * day collapse into a single first → last change, and cells that end the day
+ * exactly where they started drop out entirely. Raw events stay in entry_audit;
+ * this is a display-level rollup. Ordered chronologically by first edit.
+ */
+export function netChanges(data: DashboardData): NetChange[] {
+  const byKey = new Map<string, NetChange>()
+  for (const a of data.entryAudit) {
+    // entryAudit is ordered by changed_at ascending.
+    const day = changeDay(a.changed_at)
+    const key = `${a.kpi_id}:${a.member_id}:${a.market_id}:${a.period}:${day}`
+    const cur = byKey.get(key)
+    if (cur) {
+      cur.new_value = a.new_value
+      cur.changed_at = a.changed_at
+    } else {
+      byKey.set(key, {
+        kpi_id: a.kpi_id,
+        member_id: a.member_id,
+        market_id: a.market_id,
+        period: a.period,
+        day,
+        old_value: a.old_value,
+        new_value: a.new_value,
+        changed_at: a.changed_at,
+      })
+    }
+  }
+  return [...byKey.values()].filter((c) => c.old_value !== c.new_value)
+}
+
+/**
+ * Per-day CHANGE activity for `period`'s month: how many cells NET-changed on
+ * each local day. Keyed by ISO day; only days with at least one net change are
+ * present. Feeds the change-log calendar.
  */
 export function changeActivityInMonth(data: DashboardData, period: string): Map<string, number> {
   const end = monthEnd(period)
   const out = new Map<string, number>()
-  for (const a of data.entryAudit) {
-    const day = changeDay(a.changed_at)
-    if (day >= period && day <= end) out.set(day, (out.get(day) ?? 0) + 1)
+  for (const c of netChanges(data)) {
+    if (c.day >= period && c.day <= end) out.set(c.day, (out.get(c.day) ?? 0) + 1)
   }
   return out
 }
