@@ -126,7 +126,7 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
   return (
     // Form editor — content-width, not page-width: rows keep their controls
     // next to the KPI names instead of drifting across a wide screen.
-    <div className="max-w-[1080px] space-y-4">
+    <div className="max-w-[1040px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-ink-soft">
           Plan for <strong className="font-semibold text-ink">{monthLabel}</strong>
@@ -213,7 +213,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                     <span className="w-14 text-2xs text-ink-muted">€/seller</span>
                   </span>
                 ) : (
-                  <span />
+                  /* Same-width spacer so every row's controls align vertically. */
+                  <span aria-hidden className="w-[142px]" />
                 )}
                 <span className="flex items-center justify-end gap-1.5">
                   <input
