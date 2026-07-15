@@ -157,8 +157,9 @@ export function Update() {
         </div>
       )}
 
-      {/* Entry grid takes the row; the change-log column keeps a fixed sane width on wide screens. */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_430px]">
+      {/* Entry grid takes the row; the change-log column keeps a fixed sane width on wide
+          screens. items-start lets each card hug its content instead of stretching. */}
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_430px]">
         {/* Entry grid */}
         <Panel
           className="lg:col-span-2 2xl:col-span-1"
@@ -277,9 +278,11 @@ export function Update() {
         </div>
       </div>
 
-      {/* Per-seller assortment quality — only shown while a KPI is actually derived from it. */}
+      {/* Per-seller assortment quality — only shown while a KPI is actually derived from it.
+          Form editor: the card itself stays content-width. */}
       {assortmentKpi && (
         <Panel
+          className="max-w-[920px]"
           eyebrow={`Assortment quality · ${format(parseISO(period), 'MMMM yyyy')}`}
           title={assortmentKpi.name}
         >
