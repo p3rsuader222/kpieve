@@ -88,7 +88,11 @@ export async function fetchDashboard(): Promise<DashboardData> {
       (m): Member => ({ ...m, marketIds: coverage.get(m.id) ?? [] }),
     ),
     kpis: (kpis.data ?? []).map(
-      (k): Kpi => ({ ...k, default_target: k.default_target == null ? null : Number(k.default_target) }),
+      (k): Kpi => ({
+        ...k,
+        default_target: k.default_target == null ? null : Number(k.default_target),
+        risk_grace: k.risk_grace == null ? 20 : Number(k.risk_grace),
+      }),
     ),
     entries: (entries.data ?? []).map(
       (e): Entry => ({ ...e, value: Number(e.value), target: e.target == null ? null : Number(e.target) }),

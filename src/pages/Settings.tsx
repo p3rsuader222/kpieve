@@ -241,7 +241,8 @@ export function Settings() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-semibold text-ink">{k.name}</span>
-                  {!k.active && <span className="chip">Hidden</span>}
+                  {k.additional && <span className="chip shrink-0">Additional</span>}
+                  {!k.active && <span className="chip shrink-0">Hidden</span>}
                 </div>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-ink-muted">
                   <span>{FORMAT_LABEL[k.format]}</span>

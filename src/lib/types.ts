@@ -47,6 +47,14 @@ export interface Kpi {
   active: boolean
   /** Fact source. 'entries' (default) rolls up the entries table; 'assortment' derives % of sellers who passed. */
   compute: KpiCompute
+  /** Tagged "Additional (non-mandatory)" across the UI. Display-only — scoring is unaffected. */
+  additional: boolean
+  /**
+   * Lower-is-better only: percent of the target the value may overshoot before
+   * counting as failed (the overshoot zone reads as "at risk").
+   * E.g. target 5%, grace 20 → up to 6% at risk, beyond fails.
+   */
+  risk_grace: number
 }
 
 export interface Entry {

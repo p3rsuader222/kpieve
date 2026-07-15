@@ -400,7 +400,7 @@ export function kpiSnapshot(
     kpi.aggregation,
   )
 
-  const a = attainment(cur.value, cur.target, kpi.direction)
+  const a = attainment(cur.value, cur.target, kpi.direction, kpi.risk_grace)
   const delta = cur.value != null && prev.value != null ? cur.value - prev.value : null
 
   const spark = seriesByDay(
@@ -443,7 +443,7 @@ export function byMarket(data: DashboardData, kpi: Kpi, range: TimeRange): Break
         filterEntries(data.entries, { kpiId: kpi.id, marketId: market.id, start: b.start, end: b.end }),
         kpi.aggregation,
       )
-      const a = attainment(agg.value, agg.target, kpi.direction)
+      const a = attainment(agg.value, agg.target, kpi.direction, kpi.risk_grace)
       return { entity: market, value: agg.value, target: agg.target, attainment: a, status: statusFromAttainment(a) }
     })
 }
@@ -455,7 +455,7 @@ export function byMember(data: DashboardData, kpi: Kpi, range: TimeRange): Break
       filterEntries(data.entries, { kpiId: kpi.id, memberId: member.id, start: b.start, end: b.end }),
       kpi.aggregation,
     )
-    const a = attainment(agg.value, agg.target, kpi.direction)
+    const a = attainment(agg.value, agg.target, kpi.direction, kpi.risk_grace)
     return { entity: member, value: agg.value, target: agg.target, attainment: a, status: statusFromAttainment(a) }
   })
 }
@@ -479,7 +479,7 @@ export function memberAdherence(data: DashboardData, member: Member, range: Time
       filterEntries(data.entries, { kpiId: kpi.id, memberId: member.id, start: b.start, end: b.end }),
       kpi.aggregation,
     )
-    return { status: statusFromAttainment(attainment(agg.value, agg.target, kpi.direction)) }
+    return { status: statusFromAttainment(attainment(agg.value, agg.target, kpi.direction, kpi.risk_grace)) }
   })
   return adherence(snaps)
 }
@@ -515,7 +515,7 @@ export function heatmap(data: DashboardData, range: TimeRange, kpi?: Kpi): HeatC
           filterEntries(data.entries, { kpiId: k.id, memberId: member.id, marketId: market.id, start: b.start, end: b.end }),
           k.aggregation,
         )
-        const a = attainment(agg.value, agg.target, k.direction)
+        const a = attainment(agg.value, agg.target, k.direction, k.risk_grace)
         if (a != null) vals.push(Math.min(a, 1.25))
       }
       const mean = vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : null
@@ -599,7 +599,7 @@ export function snapshotForPeriod(
     : scope.marketId
       ? periodTarget(data, kpi.id, scope.marketId, period)
       : totalTarget(data, kpi, period)
-  const a = attainment(value, target, kpi.direction)
+  const a = attainment(value, target, kpi.direction, kpi.risk_grace)
   const prev = periodFact(data, kpi, prevPeriod(period), scope)
   const delta = value != null && prev != null ? value - prev : null
   const spark = monthlySeries(data, kpi, scope)
@@ -627,7 +627,7 @@ export function byMarketPeriod(data: DashboardData, kpi: Kpi, period: string): B
     .map((market) => {
       const value = periodFact(data, kpi, period, { marketId: market.id })
       const target = periodTarget(data, kpi.id, market.id, period)
-      const a = attainment(value, target, kpi.direction)
+      const a = attainment(value, target, kpi.direction, kpi.risk_grace)
       return { entity: market, value, target, attainment: a, status: statusFromAttainment(a) }
     })
 }
@@ -636,7 +636,7 @@ export function byMemberPeriod(data: DashboardData, kpi: Kpi, period: string): B
   return activeMembers(data).map((member) => {
     const value = periodFact(data, kpi, period, { memberId: member.id })
     const target = memberTargetForPeriod(data, kpi, member, period)
-    const a = attainment(value, target, kpi.direction)
+    const a = attainment(value, target, kpi.direction, kpi.risk_grace)
     return { entity: member, value, target, attainment: a, status: statusFromAttainment(a) }
   })
 }
@@ -645,7 +645,7 @@ export function memberAdherencePeriod(data: DashboardData, member: Member, perio
   const snaps = activeKpis(data).map((kpi) => {
     const value = periodFact(data, kpi, period, { memberId: member.id })
     const target = memberTargetForPeriod(data, kpi, member, period)
-    return { status: statusFromAttainment(attainment(value, target, kpi.direction)) }
+    return { status: statusFromAttainment(attainment(value, target, kpi.direction, kpi.risk_grace)) }
   })
   return adherence(snaps)
 }
@@ -668,7 +668,7 @@ export function heatmapPeriod(data: DashboardData, period: string, kpi?: Kpi): H
       const vals: number[] = []
       for (const k of kpis) {
         const value = periodFact(data, k, period, { memberId: member.id, marketId: market.id })
-        const a = attainment(value, cellTarget(data, k, market.id, period), k.direction)
+        const a = attainment(value, cellTarget(data, k, market.id, period), k.direction, k.risk_grace)
         if (a != null) vals.push(Math.min(a, 1.25))
       }
       const mean = vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : null
@@ -707,7 +707,7 @@ export function countryMatrix(data: DashboardData, period: string): MatrixRow[] 
       const scope: PeriodScope = market ? { marketId: market.id } : {}
       const fact = periodFact(data, kpi, period, scope)
       const target = market ? periodTarget(data, kpi.id, market.id, period) : totalTarget(data, kpi, period)
-      const a = attainment(fact, target, kpi.direction)
+      const a = attainment(fact, target, kpi.direction, kpi.risk_grace)
       const status = statusFromAttainment(a)
       cells[kpi.id] = { fact, target, attainment: a, status }
       statuses.push({ status })
@@ -814,7 +814,7 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
         weightSum += c.weight
         const value = periodFact(data, kpi, period, { memberId: member.id })
         const target = memberTargetForPeriod(data, kpi, member, period)
-        const att = attainment(value, target, kpi.direction)
+        const att = attainment(value, target, kpi.direction, kpi.risk_grace)
         const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
         const met = att != null && att >= BONUS_THRESHOLD
         const portion = (base * c.weight) / 100

@@ -170,14 +170,25 @@ export function Update() {
               <button
                 key={k.id}
                 onClick={() => setActiveKpiId(k.id)}
+                title={k.additional ? `${k.name} — additional (non-mandatory)` : k.name}
                 className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
                   k.id === activeKpi.id
                     ? 'bg-brand text-brand-contrast shadow-card'
                     : 'text-ink-muted hover:bg-surface hover:text-ink',
                 )}
               >
                 {k.name}
+                {k.additional && (
+                  <span
+                    className={cn(
+                      'rounded px-1 py-px text-2xs font-bold',
+                      k.id === activeKpi.id ? 'bg-brand-contrast/20' : 'bg-surface-2',
+                    )}
+                  >
+                    add
+                  </span>
+                )}
               </button>
             ))}
           </div>

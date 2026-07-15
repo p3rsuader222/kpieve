@@ -28,7 +28,7 @@ export function MemberLeaderboard({
         const statuses: { id: string; name: string; status: Status }[] = kpis.map((kpi) => {
           const value = periodFact(data, kpi, period, { memberId: member.id })
           const target = memberTargetForPeriod(data, kpi, member, period)
-          return { id: kpi.id, name: kpi.name, status: statusFromAttainment(attainment(value, target, kpi.direction)) }
+          return { id: kpi.id, name: kpi.name, status: statusFromAttainment(attainment(value, target, kpi.direction, kpi.risk_grace)) }
         })
         const markets = member.marketIds
           .map((id) => data.markets.find((m) => m.id === id)?.code)

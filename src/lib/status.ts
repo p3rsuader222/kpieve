@@ -7,17 +7,27 @@ const ON_TRACK = 0.97
 const AT_RISK = 0.85
 
 /**
- * Attainment ratio in [0, ~2]: 1 means target met.
- * For "lower is better" KPIs we invert so smaller values score higher.
+ * Attainment ratio: 1 means target met.
+ * "Lower is better" targets are compliance bars — anything at or under the bar
+ * is simply achieved (100%, never over), overshooting by up to `gracePct` % of
+ * the bar reads as at-risk, and beyond that as failed (e.g. target 5%,
+ * grace 20: ≤5% good, 6% at risk, >6% off track). gracePct 0 → any overshoot
+ * fails outright.
  */
 export function attainment(
   value: number | null | undefined,
   target: number | null | undefined,
   direction: KpiDirection,
+  gracePct = 20,
 ): number | null {
   if (value == null || target == null || Number.isNaN(value) || Number.isNaN(target)) return null
   if (target === 0) return value === 0 ? 1 : direction === 'higher_better' ? 2 : 0
-  const ratio = direction === 'higher_better' ? value / target : target / value
+  if (direction === 'lower_better') {
+    if (value <= target) return 1
+    // Decay tuned so +grace overshoot lands exactly on the at-risk boundary.
+    return Math.max(0, ON_TRACK - ((value / target - 1) / (gracePct / 100)) * (ON_TRACK - AT_RISK))
+  }
+  const ratio = value / target
   if (!isFinite(ratio) || ratio < 0) return 0
   return ratio
 }
@@ -33,8 +43,9 @@ export function statusOf(
   value: number | null | undefined,
   target: number | null | undefined,
   direction: KpiDirection,
+  gracePct?: number,
 ): Status {
-  return statusFromAttainment(attainment(value, target, direction))
+  return statusFromAttainment(attainment(value, target, direction, gracePct))
 }
 
 export const STATUS_LABEL: Record<Status, string> = {

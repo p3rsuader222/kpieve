@@ -56,10 +56,11 @@ export function CountryMatrix({ data, period, selected, onSelect }: Props) {
           {kpis.map((k) => (
             <span
               key={k.id}
-              title={k.name}
+              title={k.additional ? `${k.name} — additional (non-mandatory)` : k.name}
               className="text-2xs font-semibold uppercase leading-tight tracking-wider text-ink-muted"
             >
               {k.name}
+              {k.additional && <span className="ml-1 rounded bg-surface-2 px-1 py-px normal-case text-brand-ink">add</span>}
             </span>
           ))}
         </div>

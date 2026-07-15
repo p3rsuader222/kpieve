@@ -23,6 +23,8 @@ const blank = {
   aggregation: 'sum' as KpiAggregation,
   default_target: '',
   active: true,
+  additional: false,
+  risk_grace: '20',
 }
 
 export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
@@ -41,6 +43,8 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
             aggregation: kpi.aggregation,
             default_target: kpi.default_target == null ? '' : String(kpi.default_target),
             active: kpi.active,
+            additional: kpi.additional,
+            risk_grace: String(kpi.risk_grace ?? 20),
           }
         : blank,
     )
@@ -50,6 +54,7 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
 
   function submit() {
     if (!f.name.trim()) return
+    const grace = Number(f.risk_grace)
     onSubmit({
       ...(kpi ? { id: kpi.id } : {}),
       name: f.name.trim(),
@@ -60,6 +65,8 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
       aggregation: f.aggregation,
       default_target: f.default_target.trim() === '' ? null : Number(f.default_target),
       active: f.active,
+      additional: f.additional,
+      risk_grace: f.risk_grace.trim() === '' || Number.isNaN(grace) || grace < 0 ? 20 : grace,
     })
   }
 
@@ -131,6 +138,33 @@ export function KpiEditor({ open, kpi, saving, onClose, onSubmit }: Props) {
             <Toggle checked={f.active} onChange={(v) => set('active', v)} ariaLabel="Active" />
             <span className="text-sm font-medium text-ink-soft">Active</span>
           </div>
+        </div>
+        {f.direction === 'lower_better' && (
+          <div>
+            <Input
+              label="At-risk margin (%)"
+              type="number"
+              step="any"
+              min={0}
+              value={f.risk_grace}
+              onChange={(e) => set('risk_grace', e.target.value)}
+              placeholder="20"
+              className="max-w-[60%]"
+            />
+            <p className="mt-1.5 text-2xs text-ink-muted">
+              How far past the bar still counts as "at risk" before failing — e.g. target 5% with a 20% margin:
+              up to 6% is at risk, beyond fails. At or under the bar is always achieved.
+            </p>
+          </div>
+        )}
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-line bg-surface-2/40 px-3.5 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink">Additional (non-mandatory)</p>
+            <p className="mt-0.5 text-2xs text-ink-muted">
+              Tagged as additional across the app — scoring and adherence are unaffected.
+            </p>
+          </div>
+          <Toggle checked={f.additional} onChange={(v) => set('additional', v)} ariaLabel="Additional (non-mandatory)" />
         </div>
       </div>
     </Modal>

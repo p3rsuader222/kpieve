@@ -17,9 +17,16 @@ export function KpiCard({ snap }: { snap: KpiSnapshot }) {
   return (
     <article className="card group relative flex flex-col gap-1.5 p-3 transition-shadow duration-300 hover:shadow-card-hover">
       <header className="min-w-0">
-        <h3 className="truncate text-xs font-semibold text-ink" title={kpi.name}>
-          {kpi.name}
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="min-w-0 truncate text-xs font-semibold text-ink" title={kpi.name}>
+            {kpi.name}
+          </h3>
+          {kpi.additional && (
+            <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-2xs font-semibold text-ink-muted">
+              Additional
+            </span>
+          )}
+        </div>
         <p className="mt-1 flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-2xs font-medium text-ink-muted">
             <StatusDot status={status} />
