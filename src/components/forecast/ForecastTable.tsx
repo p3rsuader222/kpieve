@@ -138,10 +138,12 @@ export function ForecastTable({ data, kpi, period }: Props) {
           style={{ gridTemplateColumns: COLS }}
         >
           <span>Country</span>
-          <span className="whitespace-nowrap text-right text-brand-ink">Potential</span>
-          <span className="whitespace-nowrap text-right">3-mo avg</span>
-          {/* pr matches the input's inner inset so the header edge meets the digits. */}
-          <span className="whitespace-nowrap pr-2.5 text-right">Target</span>
+          {/* Numeric columns share ONE centered axis: header, values, dashes and
+              input text all sit on the same vertical line — reads aligned even
+              when the data is sparse. */}
+          <span className="whitespace-nowrap text-center text-brand-ink">Potential</span>
+          <span className="whitespace-nowrap text-center">3-mo avg</span>
+          <span className="whitespace-nowrap text-center">Target</span>
         </div>
         <div className="divide-y divide-line">
           {marketRows.map((r) => (
@@ -150,10 +152,10 @@ export function ForecastTable({ data, kpi, period }: Props) {
                 <Flag code={r.code} size={18} />
                 <span className="text-sm font-medium text-ink">{r.code}</span>
               </span>
-              <span className="tnum text-right text-base font-semibold text-ink">
+              <span className="tnum text-center text-base font-semibold text-ink">
                 {formatCompact(r.prevActual, kpi.format)}
               </span>
-              <span className="tnum text-right text-sm text-ink-soft">{formatCompact(r.avg3, kpi.format)}</span>
+              <span className="tnum text-center text-sm text-ink-soft">{formatCompact(r.avg3, kpi.format)}</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -162,7 +164,7 @@ export function ForecastTable({ data, kpi, period }: Props) {
                 onChange={(e) => setTargets((v) => ({ ...v, [r.id]: e.target.value }))}
                 placeholder={r.target != null ? formatCompact(r.target, kpi.format) : '—'}
                 aria-label={`${r.code} target for ${monthLabel}`}
-                className="tnum h-8 w-full rounded-lg border border-line bg-surface px-2 text-right text-sm font-semibold text-ink placeholder:text-ink-muted/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                className="tnum h-8 w-full rounded-lg border border-line bg-surface px-2 text-center text-sm font-semibold text-ink placeholder:text-ink-muted/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
           ))}
@@ -171,11 +173,11 @@ export function ForecastTable({ data, kpi, period }: Props) {
             style={{ gridTemplateColumns: COLS }}
           >
             <span className="text-sm font-semibold text-ink">Total</span>
-            <span className="tnum text-right text-base font-semibold text-ink">
+            <span className="tnum text-center text-base font-semibold text-ink">
               {formatCompact(totalRow.prevActual, kpi.format)}
             </span>
-            <span className="tnum text-right text-sm text-ink-soft">{formatCompact(totalRow.avg3, kpi.format)}</span>
-            <span className="tnum pr-2.5 text-right text-sm font-semibold text-ink">
+            <span className="tnum text-center text-sm text-ink-soft">{formatCompact(totalRow.avg3, kpi.format)}</span>
+            <span className="tnum text-center text-sm font-semibold text-ink">
               {totalTargetLive != null ? formatCompact(totalTargetLive, kpi.format) : '—'}
             </span>
           </div>
