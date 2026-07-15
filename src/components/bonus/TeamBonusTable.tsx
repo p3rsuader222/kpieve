@@ -1,10 +1,13 @@
 import { useMemo } from 'react'
+import { format, parseISO } from 'date-fns'
+import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { activeKpis, teamBonus, type MemberBonusKpi } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
 import type { DashboardData } from '@/lib/types'
 import type { BonusBaseUpsert, KpiMarketConfigUpsert } from '@/data/datasource'
 import { Avatar } from '@/components/ui/Avatar'
+import { Button } from '@/components/ui/Button'
 import { Flag } from '@/components/ui/Flag'
 import { BonusPlanEditor } from '@/components/settings/BonusPlanEditor'
 
@@ -17,28 +20,52 @@ interface Props {
   view: BonusView
   saving: boolean
   onSave: (config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) => void
+  /** Empty-state CTA: jump straight to the Weights view. */
+  onOpenWeights: () => void
 }
 
 const eur = (n: number) => formatValue(n, { format: 'currency' })
 
-export function TeamBonusTable({ data, period, view, saving, onSave }: Props) {
+export function TeamBonusTable({ data, period, view, saving, onSave, onOpenWeights }: Props) {
   return view === 'score' ? (
-    <Scoreboard data={data} period={period} />
+    <Scoreboard data={data} period={period} onOpenWeights={onOpenWeights} />
   ) : (
     <BonusPlanEditor data={data} period={period} saving={saving} onSave={onSave} />
   )
 }
 
-function Scoreboard({ data, period }: { data: DashboardData; period: string }) {
+function Scoreboard({
+  data,
+  period,
+  onOpenWeights,
+}: {
+  data: DashboardData
+  period: string
+  onOpenWeights: () => void
+}) {
   const bonus = useMemo(() => teamBonus(data, period), [data, period])
   const kpis = useMemo(() => activeKpis(data), [data])
 
   const hasPlan = bonus.some((mb) => mb.coreKpis.length > 0 || mb.additionalKpis.length > 0)
   if (!hasPlan) {
+    // Proper empty state: centered in the content area with one clear action,
+    // instead of a thin full-width strip that leaves the page looking broken.
     return (
-      <div className="rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
-        No bonus plan for this month yet. Open the <strong className="font-semibold text-ink">Weights</strong> tab to set
-        each market's weights and each person's base pool.
+      <div className="card flex flex-col items-center px-6 py-16 text-center">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">
+          <SlidersHorizontal size={22} />
+        </span>
+        <h3 className="mt-4 font-heading text-lg font-semibold text-ink">
+          No bonus plan for {format(parseISO(period), 'MMMM yyyy')} yet
+        </h3>
+        <p className="mt-1.5 max-w-md text-sm text-ink-muted">
+          Set each market's KPI weights and every person's base pool — the scoreboard fills in from there. You can also
+          copy last month's plan in one click.
+        </p>
+        <Button variant="primary" size="md" className="mt-5" onClick={onOpenWeights}>
+          <SlidersHorizontal size={15} />
+          Set up the bonus plan
+        </Button>
       </div>
     )
   }

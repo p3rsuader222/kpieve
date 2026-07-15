@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns'
 import { CalendarClock, Info } from 'lucide-react'
 import { activeKpis, monthStart } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
+import { usePersistentState } from '@/hooks/usePersistentState'
 import { KpiRail } from '@/components/ui/KpiRail'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
@@ -14,13 +15,17 @@ export function Forecast() {
   const { data, isLoading } = useDashboard()
 
   const [period, setPeriod] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<string[] | null>(null)
+  // KPI selection is remembered across visits — Evelina reopens the page on
+  // the same set of cards she left. null = never chosen → headline default.
+  const [selectedIds, setSelectedIds] = usePersistentState<string[] | null>('kpieve-forecast-kpis', null)
 
   if (isLoading || !data) return <ForecastSkeleton />
 
   const kpis = activeKpis(data)
   const defaultId = (kpis.find((k) => k.name === HEADLINE_KPI) ?? kpis[0])?.id
-  const selected = selectedIds ?? (defaultId ? [defaultId] : [])
+  // Drop remembered ids whose KPI has since been deleted or hidden.
+  const selected =
+    selectedIds == null ? (defaultId ? [defaultId] : []) : selectedIds.filter((id) => kpis.some((k) => k.id === id))
   const selectedKpis = kpis.filter((k) => selected.includes(k.id))
 
   // Default to the current (in-progress) month: its onboarding completions are

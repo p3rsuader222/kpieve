@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { ArrowDown, ArrowUp, Database, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Database, Gauge, Pencil, Plus, ShieldCheck, Target, Trash2, Users } from 'lucide-react'
 import { activeKpis } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
 import type { Kpi, Member } from '@/lib/types'
@@ -8,6 +8,7 @@ import { usingMockData } from '@/data/datasource'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useBonusLock } from '@/hooks/useBonusLock'
 import { useConfigMutations } from '@/hooks/useConfigMutations'
+import { usePersistentState } from '@/hooks/usePersistentState'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +16,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { TabBar, tabPanelProps, type TabItem } from '@/components/ui/TabBar'
 import { Toggle } from '@/components/ui/Toggle'
 import { verifyBonusPassword } from '@/lib/bonusAccess'
 import { KpiEditor } from '@/components/settings/KpiEditor'
@@ -29,6 +31,16 @@ const FORMAT_LABEL: Record<Kpi['format'], string> = {
   duration: 'Duration',
 }
 
+type SettingsTab = 'targets' | 'kpis' | 'team' | 'access'
+const TAB_IDS: SettingsTab[] = ['targets', 'kpis', 'team', 'access']
+
+const TAB_BLURB: Record<SettingsTab, string> = {
+  targets: 'The official monthly goal per country — the Dashboard and Team Bonus score against these.',
+  kpis: 'What the team tracks: formats, directions, targets and per-KPI scoring rules.',
+  team: 'Who is on the team and which markets each person owns.',
+  access: 'Privacy controls for sensitive pages.',
+}
+
 export function Settings() {
   const { data, isLoading } = useDashboard()
   const m = useConfigMutations()
@@ -39,6 +51,10 @@ export function Settings() {
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null)
   const [memberOpen, setMemberOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+
+  // The open section is remembered across visits (guard against stale keys).
+  const [tabRaw, setTab] = usePersistentState<SettingsTab>('kpieve-settings-tab', 'targets')
+  const tab: SettingsTab = TAB_IDS.includes(tabRaw) ? tabRaw : 'targets'
 
   // Disabling the Team Bonus lock requires the access code (turning it on doesn't).
   const [lockPromptOpen, setLockPromptOpen] = useState(false)
@@ -180,13 +196,19 @@ export function Settings() {
     }
   }
 
+  const tabs: TabItem<SettingsTab>[] = [
+    { id: 'targets', label: 'Targets', icon: <Target size={15} /> },
+    { id: 'kpis', label: 'KPIs', icon: <Gauge size={15} />, count: kpis.length },
+    { id: 'team', label: 'Team', icon: <Users size={15} />, count: members.length },
+    { id: 'access', label: 'Access', icon: <ShieldCheck size={15} /> },
+  ]
+
   return (
     // Config forms — capped at a readable width; data-grid pages stay wide.
     <div className="max-w-[1280px] space-y-4">
       <div>
         <p className="eyebrow">Configuration</p>
         <h1 className="mt-1 font-heading text-[1.6rem] font-semibold leading-none tracking-tight text-ink">Settings</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">Manage targets, KPIs, team members and their markets.</p>
       </div>
 
       {usingMockData && (
@@ -199,34 +221,42 @@ export function Settings() {
         </div>
       )}
 
-      {/* Targets (editor) + Markets (reference) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel className="lg:col-span-2" eyebrow="Per country · per month" title="Targets">
-          <TargetEditor
-            data={data}
-            saving={m.upsertTargets.isPending}
-            deleting={m.deleteTargets.isPending}
-            onSave={saveTargets}
-            onDelete={deleteTargets}
-          />
-        </Panel>
-        <Panel eyebrow="Reference" title="Markets">
-          <div className="flex flex-wrap gap-2">
-            {markets.map((mk) => (
-              <span key={mk.id} className="chip text-ink-soft">
-                {mk.code} · {mk.name}
-              </span>
-            ))}
-          </div>
-          <p className="mt-3 text-2xs text-ink-muted">
-            The LT · LV · EE · PL markets are seeded in the database. Assign them to members below.
-          </p>
-        </Panel>
+      {/* Section tabs — the open one is remembered across visits. */}
+      <div>
+        <TabBar ariaLabel="Settings sections" tabs={tabs} value={tab} onChange={setTab} />
+        <p className="mt-3 text-sm text-ink-muted">{TAB_BLURB[tab]}</p>
       </div>
 
-      {/* KPIs + Members side by side */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Targets (editor) + Markets (reference) */}
+      {tab === 'targets' && (
+        <div {...tabPanelProps('targets')} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Panel className="lg:col-span-2" eyebrow="Per country · per month" title="Targets">
+            <TargetEditor
+              data={data}
+              saving={m.upsertTargets.isPending}
+              deleting={m.deleteTargets.isPending}
+              onSave={saveTargets}
+              onDelete={deleteTargets}
+            />
+          </Panel>
+          <Panel eyebrow="Reference" title="Markets">
+            <div className="flex flex-wrap gap-2">
+              {markets.map((mk) => (
+                <span key={mk.id} className="chip text-ink-soft">
+                  {mk.code} · {mk.name}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-2xs text-ink-muted">
+              The LT · LV · EE · PL markets are seeded in the database. Assign them to members in the Team tab.
+            </p>
+          </Panel>
+        </div>
+      )}
+
       {/* KPIs */}
+      {tab === 'kpis' && (
+      <div {...tabPanelProps('kpis')} className="max-w-[820px]">
       <Panel
         eyebrow={`${activeKpis(data).length} active`}
         title="KPIs"
@@ -271,8 +301,12 @@ export function Settings() {
           ))}
         </ul>
       </Panel>
+      </div>
+      )}
 
       {/* Members */}
+      {tab === 'team' && (
+      <div {...tabPanelProps('team')} className="max-w-[820px]">
       <Panel
         eyebrow={`${members.filter((x) => x.active).length} active`}
         title="Team members"
@@ -309,8 +343,11 @@ export function Settings() {
         </ul>
       </Panel>
       </div>
+      )}
 
       {/* Privacy */}
+      {tab === 'access' && (
+      <div {...tabPanelProps('access')} className="max-w-[820px]">
       <Panel eyebrow="Privacy" title="Team Bonus access">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
@@ -326,6 +363,8 @@ export function Settings() {
           />
         </div>
       </Panel>
+      </div>
+      )}
 
       <KpiEditor open={kpiOpen} kpi={editingKpi} saving={m.saveKpi.isPending} onClose={() => setKpiOpen(false)} onSubmit={submitKpi} />
       <MemberEditor

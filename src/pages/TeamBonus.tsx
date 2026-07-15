@@ -80,7 +80,14 @@ function TeamBonusInner() {
         rates and base pools.
       </p>
 
-      <TeamBonusTable data={data} period={bonusPeriod} view={view} saving={saving} onSave={saveBonusPlan} />
+      <TeamBonusTable
+        data={data}
+        period={bonusPeriod}
+        view={view}
+        saving={saving}
+        onSave={saveBonusPlan}
+        onOpenWeights={() => setView('weights')}
+      />
     </div>
   )
 }
