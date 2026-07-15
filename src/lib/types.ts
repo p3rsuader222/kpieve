@@ -7,8 +7,14 @@ export type KpiAggregation = 'sum' | 'avg'
 export type EntrySource = 'manual' | 'sheet'
 /** Where a KPI's monthly fact comes from: rolled-up entries, or derived from sellers. */
 export type KpiCompute = 'entries' | 'assortment'
-/** In a given market+month, a KPI is either a weighted core KPI or a flat per-seller bonus. */
-export type BonusRole = 'core' | 'extra'
+/**
+ * A KPI's role in a market+month bonus plan:
+ * 'core' — weighted share of the mandatory 100% pool;
+ * 'extra' — flat € per qualifying seller (gated on 1st active offer);
+ * 'additional' — scored like core (weight × attainment, floor/cap apply) but
+ *   OUTSIDE the 100% pool: pure on-top upside, missing it costs nothing.
+ */
+export type BonusRole = 'core' | 'extra' | 'additional'
 
 export interface Market {
   id: string
@@ -125,8 +131,9 @@ export interface BonusSetting {
 
 /**
  * Per-month, per-market role of one KPI in the bonus plan.
- * `core` → weighted share of the pool (`weight` %, 80%/150% rules apply).
- * `extra` → flat per-seller bonus (`eur_rate` € × qualifying sellers).
+ * `core` → weighted share of the pool; `additional` → same scoring, on top of
+ * the pool; `extra` → flat per-seller bonus (`eur_rate` € × qualifying sellers).
+ * Floor/cap set per row where the KPI starts paying and stops counting.
  * One row per (period, market, kpi). Replaces per-member BonusWeight for scoring.
  */
 export interface KpiMarketConfig {
@@ -134,8 +141,10 @@ export interface KpiMarketConfig {
   market_id: string
   kpi_id: string
   role: BonusRole
-  weight: number // percent 0..100 (core)
+  weight: number // percent 0..100 (core/additional)
   eur_rate: number // € per qualifying seller (extra)
+  floor_pct: number // min attainment (percent) before the KPI pays (core/additional)
+  cap_pct: number // attainment ceiling (percent) counted toward the payout
 }
 
 /** Per-month base bonus pool for a member (each member belongs to one market). */

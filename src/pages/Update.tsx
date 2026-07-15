@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Database, Save } from 'lucide-react'
-import { cn } from '@/lib/cn'
 import {
   activeKpis,
   activeMembers,
@@ -23,6 +22,7 @@ import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AssortmentEditor } from '@/components/update/AssortmentEditor'
 import { ChangeDetail, EntryCalendar } from '@/components/update/EntryCalendar'
+import { KpiRail } from '@/components/ui/KpiRail'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
@@ -164,37 +164,17 @@ export function Update() {
           eyebrow={`${format(parseISO(period), 'MMMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
           title={activeKpi.name}
         >
-          {/* KPI selector — its own island */}
-          <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-line bg-surface-2/40 p-1.5">
-            {kpis.map((k) => (
-              <button
-                key={k.id}
-                onClick={() => setActiveKpiId(k.id)}
-                title={k.additional ? `${k.name} — additional (non-mandatory)` : k.name}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                  k.id === activeKpi.id
-                    ? 'bg-brand text-brand-contrast shadow-card'
-                    : 'text-ink-muted hover:bg-surface hover:text-ink',
-                )}
-              >
-                {k.name}
-                {k.additional && (
-                  <span
-                    className={cn(
-                      'rounded px-1 py-px text-2xs font-bold',
-                      k.id === activeKpi.id ? 'bg-brand-contrast/20' : 'bg-surface-2',
-                    )}
-                  >
-                    add
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <div className="flex flex-col gap-4 lg:flex-row">
+          {/* KPI rail — vertical on desktop, wrapped chips on mobile */}
+          <KpiRail
+            ariaLabel="KPI"
+            kpis={kpis}
+            selectedIds={[activeKpi.id]}
+            onSelect={setActiveKpiId}
+          />
 
           {/* Aligned table island */}
-          <div className="overflow-x-auto">
+          <div className="min-w-0 flex-1 overflow-x-auto">
             <div className="w-full min-w-[480px] overflow-hidden rounded-xl border border-line">
               <div
                 className="grid items-end gap-2.5 border-b border-line bg-surface-2/50 px-4 py-3"
@@ -261,6 +241,7 @@ export function Update() {
                 ))}
               </div>
             </div>
+          </div>
           </div>
         </Panel>
 

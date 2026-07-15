@@ -20,11 +20,20 @@ interface Props {
 const key = (marketId: string, kpiId: string) => `${marketId}:${kpiId}`
 const numInput =
   'tnum h-9 w-20 rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30'
+const numInputSm =
+  'tnum h-9 w-16 rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink placeholder:text-ink-muted/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30'
 
 function num(v: string | undefined): number {
   if (!v || v.trim() === '') return 0
   const n = Number(v)
   return Number.isNaN(n) ? 0 : n
+}
+
+/** Parse a percent input, falling back when blank/invalid/negative. */
+function numOr(v: string | undefined, fallback: number): number {
+  if (!v || v.trim() === '') return fallback
+  const n = Number(v)
+  return Number.isNaN(n) || n < 0 ? fallback : n
 }
 
 export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
@@ -37,6 +46,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
   const [roles, setRoles] = useState<Record<string, BonusRole>>({})
   const [weights, setWeights] = useState<Record<string, string>>({})
   const [rates, setRates] = useState<Record<string, string>>({})
+  const [floors, setFloors] = useState<Record<string, string>>({})
+  const [caps, setCaps] = useState<Record<string, string>>({})
   const [bases, setBases] = useState<Record<string, string>>({})
 
   // Load the editor state for `period` from the saved plan.
@@ -44,6 +55,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
     const r: Record<string, BonusRole> = {}
     const w: Record<string, string> = {}
     const rt: Record<string, string> = {}
+    const fl: Record<string, string> = {}
+    const cp: Record<string, string> = {}
     for (const mk of markets) {
       for (const k of kpis) {
         const row = data.kpiMarketConfig.find(
@@ -53,6 +66,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
         r[kk] = row?.role ?? 'core'
         w[kk] = row && row.weight ? String(row.weight) : ''
         rt[kk] = row && row.eur_rate ? String(row.eur_rate) : ''
+        fl[kk] = row ? String(row.floor_pct) : '80'
+        cp[kk] = row ? String(row.cap_pct) : '150'
       }
     }
     const b: Record<string, string> = {}
@@ -63,6 +78,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
     setRoles(r)
     setWeights(w)
     setRates(rt)
+    setFloors(fl)
+    setCaps(cp)
     setBases(b)
   }
 
@@ -92,8 +109,10 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
           market_id: mk.id,
           kpi_id: k.id,
           role,
-          weight: role === 'core' ? num(weights[kk]) : 0,
+          weight: role !== 'extra' ? num(weights[kk]) : 0,
           eur_rate: role === 'extra' ? num(rates[kk]) : 0,
+          floor_pct: numOr(floors[kk], 80),
+          cap_pct: numOr(caps[kk], 150),
         })
       }
     }
@@ -140,28 +159,33 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
           </span>
         </div>
         <div className="border-b border-line bg-surface px-3 py-2 text-2xs leading-relaxed text-ink-muted">
-          <strong className="font-semibold text-ink-soft">Core</strong> = a weight % of the bonus pool (pays from 80% of
-          target, up to 150%). <strong className="font-semibold text-ink-soft">Extra</strong> = a flat € per qualifying
-          seller, on top. Core weights should add up to 100%.
+          <strong className="font-semibold text-ink-soft">Core</strong> = a weight % of the mandatory bonus pool.{' '}
+          <strong className="font-semibold text-ink-soft">Additional</strong> = scored the same way but on top of the
+          pool — pure upside, missing it costs nothing.{' '}
+          <strong className="font-semibold text-ink-soft">Extra</strong> = a flat € per qualifying seller.
+          Core weights should add up to 100%. <strong className="font-semibold text-ink-soft">Floor</strong>/
+          <strong className="font-semibold text-ink-soft">cap</strong> set per row where the KPI starts paying and where
+          its attainment stops counting.
         </div>
         <div className="divide-y divide-line">
           {kpis.map((k) => {
             const kk = key(marketId, k.id)
             const role = roles[kk] ?? 'core'
             return (
-              <div key={k.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-2.5">
+              <div key={k.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 px-3 py-2.5">
                 <span className="min-w-0 truncate text-sm font-medium text-ink" title={k.name}>{k.name}</span>
                 <SegmentedControl
                   ariaLabel={`${k.name} role`}
                   size="sm"
                   segments={[
                     { value: 'core', label: 'Core' },
+                    { value: 'additional', label: 'Additional' },
                     { value: 'extra', label: 'Extra' },
                   ]}
                   value={role}
                   onChange={(v) => setRole(k.id, v as BonusRole)}
                 />
-                {role === 'core' ? (
+                {role !== 'extra' ? (
                   <span className="flex items-center justify-end gap-1.5">
                     <input
                       type="number"
@@ -173,7 +197,7 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                       placeholder="0"
                       className={numInput}
                     />
-                    <span className="w-14 text-2xs text-ink-muted">% of pool</span>
+                    <span className="w-14 text-2xs text-ink-muted">{role === 'additional' ? '% on top' : '% of pool'}</span>
                   </span>
                 ) : (
                   <span className="flex items-center justify-end gap-1.5">
@@ -189,6 +213,36 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                     />
                     <span className="w-14 text-2xs text-ink-muted">€/seller</span>
                   </span>
+                )}
+                {role !== 'extra' ? (
+                  <span className="flex items-center justify-end gap-1.5">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min={0}
+                      aria-label={`${k.name} floor %`}
+                      value={floors[kk] ?? ''}
+                      onChange={(e) => setFloors((f) => ({ ...f, [kk]: e.target.value }))}
+                      placeholder="80"
+                      className={numInputSm}
+                    />
+                    <span className="text-2xs text-ink-muted">floor%</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min={0}
+                      aria-label={`${k.name} cap %`}
+                      value={caps[kk] ?? ''}
+                      onChange={(e) => setCaps((c) => ({ ...c, [kk]: e.target.value }))}
+                      placeholder="150"
+                      className={numInputSm}
+                    />
+                    <span className="text-2xs text-ink-muted">cap%</span>
+                  </span>
+                ) : (
+                  <span />
                 )}
               </div>
             )
@@ -230,8 +284,9 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
       </div>
 
       <p className="text-2xs text-ink-muted">
-        Final payout uses each person's base pool × core weights (scaled by attainment, 80% to start, 150% cap) plus
-        extra €/seller bonuses. Saved per month — use <strong className="font-medium text-ink-soft">Copy previous month</strong> to roll a plan forward.
+        Final payout = base pool × core weights + additional (on-top) weights — each scaled by attainment within its
+        row's floor/cap — plus extra €/seller bonuses. Saved per month — use{' '}
+        <strong className="font-medium text-ink-soft">Copy previous month</strong> to roll a plan forward.
       </p>
     </div>
   )

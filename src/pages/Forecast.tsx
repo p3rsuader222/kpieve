@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { CalendarClock, Info } from 'lucide-react'
-import { cn } from '@/lib/cn'
 import { activeKpis, monthStart } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
+import { KpiRail } from '@/components/ui/KpiRail'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 import { ForecastTable } from '@/components/forecast/ForecastTable'
@@ -67,42 +67,30 @@ export function Forecast() {
         </span>
       </p>
 
-      {/* KPI selector */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="eyebrow mr-1">KPI</span>
-        {kpis.map((k) => {
-          const on = selected.includes(k.id)
-          return (
-            <button
-              key={k.id}
-              onClick={() => toggle(k.id)}
-              aria-pressed={on}
-              className={cn(
-                'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-                on
-                  ? 'border-brand bg-brand-soft text-brand-ink'
-                  : 'border-line bg-surface text-ink-muted hover:bg-surface-2 hover:text-ink',
-              )}
-            >
-              {k.name}
-            </button>
-          )
-        })}
+      {/* KPI rail + forecast cards */}
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <KpiRail
+          ariaLabel="Forecast KPIs"
+          kpis={kpis}
+          selectedIds={selected}
+          onSelect={toggle}
+          multi
+        />
+        <div className="min-w-0 flex-1">
+          {selectedKpis.length === 0 ? (
+            <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
+              <Info size={16} className="shrink-0 text-brand" />
+              <span>Pick at least one KPI on the left.</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              {selectedKpis.map((kpi) => (
+                <ForecastTable key={kpi.id} data={data} kpi={kpi} period={forecastPeriod} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Tables */}
-      {selectedKpis.length === 0 ? (
-        <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
-          <Info size={16} className="shrink-0 text-brand" />
-          <span>Pick at least one KPI above.</span>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {selectedKpis.map((kpi) => (
-            <ForecastTable key={kpi.id} data={data} kpi={kpi} period={forecastPeriod} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }

@@ -228,7 +228,7 @@ export function buildMockData(): DashboardData {
     for (const market of MARKETS) {
       const rows = market.code === 'LT' ? LT_CONFIG : LVEEPL_CONFIG
       for (const [kpi_id, role, weight, eur_rate] of rows) {
-        kpiMarketConfig.push({ period, market_id: market.id, kpi_id, role, weight, eur_rate })
+        kpiMarketConfig.push({ period, market_id: market.id, kpi_id, role, weight, eur_rate, floor_pct: 80, cap_pct: 150 })
       }
     }
     for (const m of MEMBERS) bonusBase.push({ period, member_id: m.id, max_bonus: MAX_BONUS[m.id] ?? 1000 })

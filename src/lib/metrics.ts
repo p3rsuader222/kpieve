@@ -729,10 +729,10 @@ export function countryMatrix(data: DashboardData, period: string): MatrixRow[] 
 //  Team bonus
 // ============================================================
 
-/** Per-KPI attainment is capped at this multiple when computing bonus. */
-export const BONUS_CAP = 1.5
-/** A KPI must reach at least this attainment to pay any bonus (else €0 for it). */
-export const BONUS_THRESHOLD = 0.8
+/** Default attainment ceiling (percent) counted toward a bonus payout. */
+export const DEFAULT_BONUS_CAP_PCT = 150
+/** Default minimum attainment (percent) before a KPI pays any bonus. */
+export const DEFAULT_BONUS_FLOOR_PCT = 80
 
 /** Name of the gating KPI: extra bonuses pay only for sellers with a 1st active offer. */
 export const ACTIVE_OFFER_KPI_NAME = 'Sellers with 1st active offer'
@@ -755,15 +755,17 @@ export function marketKpiConfig(data: DashboardData, period: string, marketId: s
 export interface MemberBonusKpi {
   kpi: Kpi
   role: BonusRole
-  weight: number // percent 0..100 (core); 0 for extra
-  value: number | null // fact (core) or qualifying-seller count (extra)
-  target: number | null // core only
-  attainment: number | null // core only
-  cappedAttainment: number | null // min(attainment, BONUS_CAP)
-  /** Core: attainment ≥ 80%. Extra: gate open and count > 0 (so it pays). */
+  weight: number // percent 0..100 (core/additional); 0 for extra
+  value: number | null // fact (core/additional) or qualifying-seller count (extra)
+  target: number | null // core/additional only
+  attainment: number | null // core/additional only
+  cappedAttainment: number | null // min(attainment, row cap)
+  /** Core/additional: attainment ≥ row floor. Extra: gate open and count > 0 (so it pays). */
   met: boolean
-  portion: number // base * weight/100 — the core payout at 100% (0 for extra)
-  eurRate: number // € per qualifying seller (extra); 0 for core
+  portion: number // base * weight/100 — the payout at 100% (0 for extra)
+  eurRate: number // € per qualifying seller (extra); 0 otherwise
+  floorPct: number // row floor (percent); defaults for extras
+  capPct: number // row ceiling (percent); defaults for extras
   bonus: number
 }
 
@@ -771,10 +773,13 @@ export interface MemberBonus {
   member: Member
   market: Market | null
   maxBonus: number // the member's base pool for the month
-  weightSum: number // sum of core weights (percent) — should be 100
+  weightSum: number // sum of CORE weights (percent) — should be 100
   coreKpis: MemberBonusKpi[]
+  /** 'additional' rows: scored like core but on top of the pool — pure upside. */
+  additionalKpis: MemberBonusKpi[]
   extras: MemberBonusKpi[]
   coreBonus: number
+  additionalBonus: number
   extraBonus: number
   finalBonus: number
   /** Extra bonuses are gated on the member having ≥1 seller with a 1st active offer. */
@@ -783,7 +788,10 @@ export interface MemberBonus {
 
 /**
  * Each member's bonus for `period`, scored against THEIR single market's plan:
- *  - core KPIs pay `base × weight/100 × attainment` (capped 150%), only once ≥ 80%;
+ *  - core KPIs pay `base × weight/100 × attainment` (per-row cap), only once
+ *    attainment reaches the row's floor;
+ *  - additional KPIs score identically but sit outside the 100% pool — they
+ *    only ever add on top;
  *  - extra items pay `count × €/seller`, gated on the member having a 1st active offer.
  * Members/markets with no plan rows for the month contribute 0.
  */
@@ -801,36 +809,47 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
     const hasActiveOffer = offerCount > 0
 
     const coreKpis: MemberBonusKpi[] = []
+    const additionalKpis: MemberBonusKpi[] = []
     const extras: MemberBonusKpi[] = []
     let weightSum = 0
     let coreBonus = 0
+    let additionalBonus = 0
     let extraBonus = 0
 
     for (const c of config) {
       const kpi = kpiById.get(c.kpi_id)
       if (!kpi || !kpi.active) continue
+      const floorPct = c.floor_pct ?? DEFAULT_BONUS_FLOOR_PCT
+      const capPct = c.cap_pct ?? DEFAULT_BONUS_CAP_PCT
 
-      if (c.role === 'core') {
-        weightSum += c.weight
+      if (c.role === 'core' || c.role === 'additional') {
+        if (c.role === 'core') weightSum += c.weight
         const value = periodFact(data, kpi, period, { memberId: member.id })
         const target = memberTargetForPeriod(data, kpi, member, period)
         const att = attainment(value, target, kpi.direction, kpi.risk_grace)
-        const cappedAttainment = att == null ? null : Math.min(att, BONUS_CAP)
-        const met = att != null && att >= BONUS_THRESHOLD
+        const cappedAttainment = att == null ? null : Math.min(att, capPct / 100)
+        const met = att != null && att >= floorPct / 100
         const portion = (base * c.weight) / 100
         const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
-        coreBonus += bonus
-        coreKpis.push({ kpi, role: 'core', weight: c.weight, value, target, attainment: att, cappedAttainment, met, portion, eurRate: 0, bonus })
+        const row: MemberBonusKpi = { kpi, role: c.role, weight: c.weight, value, target, attainment: att, cappedAttainment, met, portion, eurRate: 0, floorPct, capPct, bonus }
+        if (c.role === 'core') {
+          coreBonus += bonus
+          coreKpis.push(row)
+        } else {
+          additionalBonus += bonus
+          additionalKpis.push(row)
+        }
       } else {
         const count = periodFact(data, kpi, period, { memberId: member.id }) ?? 0
         const met = hasActiveOffer && count > 0
         const bonus = met ? count * c.eur_rate : 0
         extraBonus += bonus
-        extras.push({ kpi, role: 'extra', weight: 0, value: count, target: null, attainment: null, cappedAttainment: null, met, portion: 0, eurRate: c.eur_rate, bonus })
+        extras.push({ kpi, role: 'extra', weight: 0, value: count, target: null, attainment: null, cappedAttainment: null, met, portion: 0, eurRate: c.eur_rate, floorPct, capPct, bonus })
       }
     }
 
     coreKpis.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
+    additionalKpis.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
     extras.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
 
     return {
@@ -839,10 +858,12 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
       maxBonus: base,
       weightSum,
       coreKpis,
+      additionalKpis,
       extras,
       coreBonus,
+      additionalBonus,
       extraBonus,
-      finalBonus: coreBonus + extraBonus,
+      finalBonus: coreBonus + additionalBonus + extraBonus,
       hasActiveOffer,
     }
   })

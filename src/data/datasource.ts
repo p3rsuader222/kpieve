@@ -61,7 +61,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
     supabase.from('forecasts').select('kpi_id, market_id, period, value').gte('period', cutoff),
     supabase.from('bonus_weights').select('member_id, kpi_id, weight'),
     supabase.from('bonus_settings').select('member_id, max_bonus'),
-    supabase.from('bonus_kpi_markets').select('period, market_id, kpi_id, role, weight, eur_rate').gte('period', cutoff),
+    supabase.from('bonus_kpi_markets').select('period, market_id, kpi_id, role, weight, eur_rate, floor_pct, cap_pct').gte('period', cutoff),
     supabase.from('bonus_base').select('period, member_id, max_bonus').gte('period', cutoff),
     supabase
       .from('assortment_sellers')
@@ -117,7 +117,13 @@ export async function fetchDashboard(): Promise<DashboardData> {
       (b): BonusSetting => ({ ...b, max_bonus: Number(b.max_bonus) }),
     ),
     kpiMarketConfig: (kpiMarketConfig.data ?? []).map(
-      (c): KpiMarketConfig => ({ ...c, weight: Number(c.weight), eur_rate: Number(c.eur_rate) }),
+      (c): KpiMarketConfig => ({
+        ...c,
+        weight: Number(c.weight),
+        eur_rate: Number(c.eur_rate),
+        floor_pct: c.floor_pct == null ? 80 : Number(c.floor_pct),
+        cap_pct: c.cap_pct == null ? 150 : Number(c.cap_pct),
+      }),
     ),
     bonusBase: (bonusBase.data ?? []).map(
       (b): BonusBase => ({ ...b, max_bonus: Number(b.max_bonus) }),
@@ -255,9 +261,11 @@ export interface KpiMarketConfigUpsert {
   period: string // yyyy-MM-01
   market_id: string
   kpi_id: string
-  role: 'core' | 'extra'
+  role: 'core' | 'extra' | 'additional'
   weight: number
   eur_rate: number
+  floor_pct: number
+  cap_pct: number
 }
 
 export async function upsertKpiMarketConfig(rows: KpiMarketConfigUpsert[]): Promise<void> {
