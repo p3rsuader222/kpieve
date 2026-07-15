@@ -12,3 +12,7 @@
 
 alter table public.kpis add column if not exists additional boolean not null default false;
 alter table public.kpis add column if not exists risk_grace numeric not null default 20;
+
+-- Hardening (advisor lint 0011): pin the trigger functions' search_path.
+alter function public.log_entry_change() set search_path = public;
+alter function public.touch_updated_at() set search_path = public;
