@@ -54,11 +54,11 @@ function TeamBonusInner() {
             </h1>
           </div>
         </div>
-        {/* One control cluster: view toggle + scoring month, aligned on a single line. */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* One control cluster: view toggle + scoring month — same height, one baseline. */}
+        <div className="flex flex-wrap items-center gap-3">
           <SegmentedControl
             ariaLabel="Team bonus view"
-            size="sm"
+            size="md"
             segments={[
               { value: 'score', label: 'Scoreboard' },
               { value: 'weights', label: 'Weights' },
@@ -66,8 +66,10 @@ function TeamBonusInner() {
             value={view}
             onChange={(v) => setView(v as BonusView)}
           />
-          <span className="hidden text-xs font-medium text-ink-muted sm:inline">Scoring month</span>
-          <MonthNav period={bonusPeriod} onChange={setPeriod} clampFuture={false} />
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs font-medium text-ink-muted sm:inline">Scoring month</span>
+            <MonthNav period={bonusPeriod} onChange={setPeriod} clampFuture={false} />
+          </div>
         </div>
       </div>
 
