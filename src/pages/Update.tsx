@@ -123,7 +123,7 @@ export function Update() {
   const cols = `180px repeat(${markets.length}, minmax(72px, 1fr))`
 
   return (
-    <div className="max-w-[1120px] space-y-6">
+    <div className="max-w-[1720px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Monthly totals</p>
@@ -157,10 +157,11 @@ export function Update() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      {/* Entry grid takes the row; the change-log column keeps a fixed sane width on wide screens. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_430px]">
         {/* Entry grid */}
         <Panel
-          className="lg:col-span-2"
+          className="lg:col-span-2 2xl:col-span-1"
           eyebrow={`${format(parseISO(period), 'MMMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
           title={activeKpi.name}
         >
@@ -190,9 +191,9 @@ export function Update() {
                     <div key={m.id} className="flex flex-col items-center gap-1">
                       <Flag code={m.code} size={22} />
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{m.code}</span>
-                      {cfg?.role === 'extra' ? (
+                      {cfg?.role === 'additional' && cfg.eur_rate > 0 ? (
                         <span className="rounded-full bg-brand-soft px-1.5 text-2xs font-semibold text-brand-ink">
-                          extra · €{cfg.eur_rate}/seller
+                          +€{cfg.eur_rate}/seller
                         </span>
                       ) : (
                         <span className="tnum text-2xs leading-tight text-ink-muted/80">

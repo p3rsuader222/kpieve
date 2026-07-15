@@ -9,12 +9,11 @@ export type EntrySource = 'manual' | 'sheet'
 export type KpiCompute = 'entries' | 'assortment'
 /**
  * A KPI's role in a market+month bonus plan:
- * 'core' — weighted share of the mandatory 100% pool;
- * 'extra' — flat € per qualifying seller (gated on 1st active offer);
- * 'additional' — scored like core (weight × attainment, floor/cap apply) but
- *   OUTSIDE the 100% pool: pure on-top upside, missing it costs nothing.
+ * 'core' — mandatory: a weighted share of the 100% pool;
+ * 'additional' — non-mandatory, pays ON TOP of the pool. It can pay a weight %
+ *   scored like core (floor/cap apply), a flat € per qualifying seller, or both.
  */
-export type BonusRole = 'core' | 'extra' | 'additional'
+export type BonusRole = 'core' | 'additional'
 
 export interface Market {
   id: string
@@ -131,9 +130,9 @@ export interface BonusSetting {
 
 /**
  * Per-month, per-market role of one KPI in the bonus plan.
- * `core` → weighted share of the pool; `additional` → same scoring, on top of
- * the pool; `extra` → flat per-seller bonus (`eur_rate` € × qualifying sellers).
- * Floor/cap set per row where the KPI starts paying and stops counting.
+ * `core` → mandatory weighted share of the pool. `additional` → on top of the
+ * pool: `weight` % scored like core and/or `eur_rate` € per qualifying seller.
+ * Floor/cap set per row where weighted scoring starts paying and stops counting.
  * One row per (period, market, kpi). Replaces per-member BonusWeight for scoring.
  */
 export interface KpiMarketConfig {
@@ -141,9 +140,9 @@ export interface KpiMarketConfig {
   market_id: string
   kpi_id: string
   role: BonusRole
-  weight: number // percent 0..100 (core/additional)
-  eur_rate: number // € per qualifying seller (extra)
-  floor_pct: number // min attainment (percent) before the KPI pays (core/additional)
+  weight: number // percent 0..100
+  eur_rate: number // € per qualifying seller (additional only)
+  floor_pct: number // min attainment (percent) before weighted scoring pays
   cap_pct: number // attainment ceiling (percent) counted toward the payout
 }
 

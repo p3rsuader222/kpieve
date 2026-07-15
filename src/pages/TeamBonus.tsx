@@ -38,7 +38,7 @@ function TeamBonusInner() {
   const saving = m.upsertKpiMarketConfig.isPending || m.upsertBonusBase.isPending
 
   return (
-    <div className="max-w-[1120px] space-y-4">
+    <div className="max-w-[1720px] space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -86,7 +86,7 @@ export function TeamBonus() {
 
 function BonusSkeleton() {
   return (
-    <div className="max-w-[1120px] space-y-4">
+    <div className="max-w-[1720px] space-y-4">
       <div className="flex items-center justify-between">
         <Skeleton className="h-9 w-64" />
         <Skeleton className="h-10 w-44" />

@@ -36,7 +36,7 @@ export function Forecast() {
   }
 
   return (
-    <div className="max-w-[1120px] space-y-4">
+    <div className="max-w-[1720px] space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -83,7 +83,9 @@ export function Forecast() {
               <span>Pick at least one KPI on the left.</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            /* Auto-fill: as many cards per row as genuinely fit — each card keeps
+               a minimum width so its Target column can never be clipped. */
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
               {selectedKpis.map((kpi) => (
                 <ForecastTable key={kpi.id} data={data} kpi={kpi} period={forecastPeriod} />
               ))}
@@ -97,7 +99,7 @@ export function Forecast() {
 
 function ForecastSkeleton() {
   return (
-    <div className="max-w-[1120px] space-y-4">
+    <div className="max-w-[1720px] space-y-4">
       <div className="flex items-center justify-between">
         <Skeleton className="h-9 w-64" />
         <Skeleton className="h-10 w-44" />

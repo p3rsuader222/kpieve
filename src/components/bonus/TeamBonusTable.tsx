@@ -51,7 +51,7 @@ function Scoreboard({ data, period }: { data: DashboardData; period: string }) {
   const bonus = useMemo(() => teamBonus(data, period), [data, period])
   const kpis = useMemo(() => activeKpis(data), [data])
 
-  const hasPlan = bonus.some((mb) => mb.coreKpis.length > 0 || mb.additionalKpis.length > 0 || mb.extras.length > 0)
+  const hasPlan = bonus.some((mb) => mb.coreKpis.length > 0 || mb.additionalKpis.length > 0)
   if (!hasPlan) {
     return (
       <div className="rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
@@ -61,11 +61,11 @@ function Scoreboard({ data, period }: { data: DashboardData; period: string }) {
     )
   }
 
-  // Quick lookup: member → kpiId → the scored row (core, additional or extra).
+  // Quick lookup: member → kpiId → the scored row (core or additional).
   const byMember = new Map<string, Map<string, MemberBonusKpi>>()
   for (const mb of bonus) {
     const m = new Map<string, MemberBonusKpi>()
-    for (const r of [...mb.coreKpis, ...mb.additionalKpis, ...mb.extras]) m.set(r.kpi.id, r)
+    for (const r of [...mb.coreKpis, ...mb.additionalKpis]) m.set(r.kpi.id, r)
     byMember.set(mb.member.id, m)
   }
 
@@ -125,31 +125,46 @@ function Scoreboard({ data, period }: { data: DashboardData; period: string }) {
       </div>
       <p className="text-2xs text-ink-muted">
         Each cell is the € that KPI pays the person this month. “—” means it isn't part of that market's plan; €0 means
-        it didn't reach its row's floor (or the extra-bonus seller count is 0). Hover a cell for the role, attainment
-        and floor/cap behind the number.
+        it didn't reach its row's floor (or the extra-bonus seller count is 0). When a KPI overshoots its ceiling the
+        cell shows the real attainment and how far past the cap it went (the payout counts only up to the cap). Hover a
+        cell for role, attainment and floor/cap.
       </p>
     </div>
   )
 }
 
 const ROLE_LABEL: Record<MemberBonusKpi['role'], string> = {
-  core: 'Core KPI',
+  core: 'Core (mandatory)',
   additional: 'Additional (on top of the pool)',
-  extra: 'Extra bonus',
 }
 
 function Cell({ row, className }: { row: MemberBonusKpi | undefined; className: string }) {
   if (!row) return <td className={cn(className, 'text-ink-muted/40')}>—</td>
   const paid = row.bonus > 0
-  const title =
-    row.role === 'extra'
-      ? `${ROLE_LABEL.extra} · ${row.value ?? 0} × €${row.eurRate}`
-      : `${ROLE_LABEL[row.role]} · attainment ${
-          row.attainment == null ? '—' : `${Math.round(row.attainment * 100)}%`
-        } · pays from ${row.floorPct}% up to ${row.capPct}%`
+  // Raw attainment beyond the row's cap: the payout stops counting there, but
+  // the real number (and how far past the ceiling it went) stays visible.
+  const overCap =
+    row.weight > 0 && row.met && row.attainment != null && row.attainment > row.capPct / 100
+      ? Math.round((row.attainment - row.capPct / 100) * 100)
+      : null
+  const parts: string[] = [ROLE_LABEL[row.role]]
+  if (row.weight > 0) {
+    parts.push(
+      `attainment ${row.attainment == null ? '—' : `${Math.round(row.attainment * 100)}%`} · pays from ${row.floorPct}% up to ${row.capPct}%`,
+    )
+    if (overCap != null) {
+      parts.push(`capped: reached ${Math.round(row.attainment! * 100)}%, ${overCap}% above the ceiling`)
+    }
+  }
+  if (row.eurRate > 0) parts.push(`${row.value ?? 0} × €${row.eurRate}/seller`)
   return (
-    <td className={cn(className, paid ? 'font-semibold text-ink' : 'text-ink-muted')} title={title}>
+    <td className={cn(className, paid ? 'font-semibold text-ink' : 'text-ink-muted')} title={parts.join(' — ')}>
       {eur(row.bonus)}
+      {overCap != null && (
+        <span className="mt-0.5 block whitespace-nowrap text-2xs font-semibold leading-tight text-warn">
+          ⤒ {Math.round(row.attainment! * 100)}% · +{overCap}% over cap
+        </span>
+      )}
     </td>
   )
 }

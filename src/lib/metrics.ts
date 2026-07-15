@@ -755,17 +755,17 @@ export function marketKpiConfig(data: DashboardData, period: string, marketId: s
 export interface MemberBonusKpi {
   kpi: Kpi
   role: BonusRole
-  weight: number // percent 0..100 (core/additional); 0 for extra
-  value: number | null // fact (core/additional) or qualifying-seller count (extra)
-  target: number | null // core/additional only
-  attainment: number | null // core/additional only
+  weight: number // percent 0..100 (weighted part; 0 = none)
+  value: number | null // the month's fact (doubles as the qualifying-seller count)
+  target: number | null // weighted part only
+  attainment: number | null // weighted part only
   cappedAttainment: number | null // min(attainment, row cap)
-  /** Core/additional: attainment ≥ row floor. Extra: gate open and count > 0 (so it pays). */
+  /** Paid something: weighted part reached its floor, or the €/seller part paid. */
   met: boolean
-  portion: number // base * weight/100 — the payout at 100% (0 for extra)
-  eurRate: number // € per qualifying seller (extra); 0 otherwise
-  floorPct: number // row floor (percent); defaults for extras
-  capPct: number // row ceiling (percent); defaults for extras
+  portion: number // base * weight/100 — the weighted payout at 100%
+  eurRate: number // € per qualifying seller (additional only; 0 = none)
+  floorPct: number // row floor (percent) for the weighted part
+  capPct: number // row ceiling (percent) for the weighted part
   bonus: number
 }
 
@@ -775,24 +775,21 @@ export interface MemberBonus {
   maxBonus: number // the member's base pool for the month
   weightSum: number // sum of CORE weights (percent) — should be 100
   coreKpis: MemberBonusKpi[]
-  /** 'additional' rows: scored like core but on top of the pool — pure upside. */
+  /** Non-mandatory rows: pay on top of the pool — pure upside. */
   additionalKpis: MemberBonusKpi[]
-  extras: MemberBonusKpi[]
   coreBonus: number
   additionalBonus: number
-  extraBonus: number
   finalBonus: number
-  /** Extra bonuses are gated on the member having ≥1 seller with a 1st active offer. */
+  /** €/seller payouts are gated on the member having ≥1 seller with a 1st active offer. */
   hasActiveOffer: boolean
 }
 
 /**
  * Each member's bonus for `period`, scored against THEIR single market's plan:
- *  - core KPIs pay `base × weight/100 × attainment` (per-row cap), only once
- *    attainment reaches the row's floor;
- *  - additional KPIs score identically but sit outside the 100% pool — they
- *    only ever add on top;
- *  - extra items pay `count × €/seller`, gated on the member having a 1st active offer.
+ *  - CORE (mandatory) KPIs pay `base × weight/100 × attainment` (per-row cap),
+ *    only once attainment reaches the row's floor; weights should sum to 100%;
+ *  - ADDITIONAL (non-mandatory) KPIs pay on top of the pool: a weight % scored
+ *    the same way, and/or `count × €/seller` (gated on a 1st active offer).
  * Members/markets with no plan rows for the month contribute 0.
  */
 export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
@@ -810,11 +807,9 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
 
     const coreKpis: MemberBonusKpi[] = []
     const additionalKpis: MemberBonusKpi[] = []
-    const extras: MemberBonusKpi[] = []
     let weightSum = 0
     let coreBonus = 0
     let additionalBonus = 0
-    let extraBonus = 0
 
     for (const c of config) {
       const kpi = kpiById.get(c.kpi_id)
@@ -822,35 +817,56 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
       const floorPct = c.floor_pct ?? DEFAULT_BONUS_FLOOR_PCT
       const capPct = c.cap_pct ?? DEFAULT_BONUS_CAP_PCT
 
-      if (c.role === 'core' || c.role === 'additional') {
-        if (c.role === 'core') weightSum += c.weight
-        const value = periodFact(data, kpi, period, { memberId: member.id })
+      const value = periodFact(data, kpi, period, { memberId: member.id })
+
+      // Weighted part (core rows always; additional rows when a weight is set).
+      let att: number | null = null
+      let cappedAttainment: number | null = null
+      let weightedMet = false
+      let weightedBonus = 0
+      const portion = (base * c.weight) / 100
+      if (c.weight > 0) {
         const target = memberTargetForPeriod(data, kpi, member, period)
-        const att = attainment(value, target, kpi.direction, kpi.risk_grace)
-        const cappedAttainment = att == null ? null : Math.min(att, capPct / 100)
-        const met = att != null && att >= floorPct / 100
-        const portion = (base * c.weight) / 100
-        const bonus = met && cappedAttainment != null ? portion * cappedAttainment : 0
-        const row: MemberBonusKpi = { kpi, role: c.role, weight: c.weight, value, target, attainment: att, cappedAttainment, met, portion, eurRate: 0, floorPct, capPct, bonus }
-        if (c.role === 'core') {
-          coreBonus += bonus
-          coreKpis.push(row)
-        } else {
-          additionalBonus += bonus
-          additionalKpis.push(row)
-        }
+        att = attainment(value, target, kpi.direction, kpi.risk_grace)
+        cappedAttainment = att == null ? null : Math.min(att, capPct / 100)
+        weightedMet = att != null && att >= floorPct / 100
+        weightedBonus = weightedMet && cappedAttainment != null ? portion * cappedAttainment : 0
+      }
+
+      // €/seller part (additional rows only), gated on the 1st-active-offer rule.
+      const count = value ?? 0
+      const ratePaid = c.role === 'additional' && c.eur_rate > 0 && hasActiveOffer && count > 0
+      const rateBonus = ratePaid ? count * c.eur_rate : 0
+
+      const bonus = weightedBonus + rateBonus
+      const row: MemberBonusKpi = {
+        kpi,
+        role: c.role,
+        weight: c.weight,
+        value,
+        target: c.weight > 0 ? memberTargetForPeriod(data, kpi, member, period) : null,
+        attainment: att,
+        cappedAttainment,
+        met: weightedMet || ratePaid,
+        portion,
+        eurRate: c.role === 'additional' ? c.eur_rate : 0,
+        floorPct,
+        capPct,
+        bonus,
+      }
+
+      if (c.role === 'core') {
+        weightSum += c.weight
+        coreBonus += bonus
+        coreKpis.push(row)
       } else {
-        const count = periodFact(data, kpi, period, { memberId: member.id }) ?? 0
-        const met = hasActiveOffer && count > 0
-        const bonus = met ? count * c.eur_rate : 0
-        extraBonus += bonus
-        extras.push({ kpi, role: 'extra', weight: 0, value: count, target: null, attainment: null, cappedAttainment: null, met, portion: 0, eurRate: c.eur_rate, floorPct, capPct, bonus })
+        additionalBonus += bonus
+        additionalKpis.push(row)
       }
     }
 
     coreKpis.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
     additionalKpis.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
-    extras.sort((a, z) => a.kpi.sort_order - z.kpi.sort_order)
 
     return {
       member,
@@ -859,11 +875,9 @@ export function teamBonus(data: DashboardData, period: string): MemberBonus[] {
       weightSum,
       coreKpis,
       additionalKpis,
-      extras,
       coreBonus,
       additionalBonus,
-      extraBonus,
-      finalBonus: coreBonus + additionalBonus + extraBonus,
+      finalBonus: coreBonus + additionalBonus,
       hasActiveOffer,
     }
   })

@@ -119,6 +119,8 @@ export async function fetchDashboard(): Promise<DashboardData> {
     kpiMarketConfig: (kpiMarketConfig.data ?? []).map(
       (c): KpiMarketConfig => ({
         ...c,
+        // Legacy 'extra' rows (pre-v9) read as additional — same €/seller payout.
+        role: c.role === 'extra' ? 'additional' : c.role,
         weight: Number(c.weight),
         eur_rate: Number(c.eur_rate),
         floor_pct: c.floor_pct == null ? 80 : Number(c.floor_pct),
@@ -261,7 +263,7 @@ export interface KpiMarketConfigUpsert {
   period: string // yyyy-MM-01
   market_id: string
   kpi_id: string
-  role: 'core' | 'extra' | 'additional'
+  role: 'core' | 'additional'
   weight: number
   eur_rate: number
   floor_pct: number

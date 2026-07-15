@@ -109,8 +109,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
           market_id: mk.id,
           kpi_id: k.id,
           role,
-          weight: role !== 'extra' ? num(weights[kk]) : 0,
-          eur_rate: role === 'extra' ? num(rates[kk]) : 0,
+          weight: num(weights[kk]),
+          eur_rate: role === 'additional' ? num(rates[kk]) : 0,
           floor_pct: numOr(floors[kk], 80),
           cap_pct: numOr(caps[kk], 150),
         })
@@ -159,20 +159,19 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
           </span>
         </div>
         <div className="border-b border-line bg-surface px-3 py-2 text-2xs leading-relaxed text-ink-muted">
-          <strong className="font-semibold text-ink-soft">Core</strong> = a weight % of the mandatory bonus pool.{' '}
-          <strong className="font-semibold text-ink-soft">Additional</strong> = scored the same way but on top of the
-          pool — pure upside, missing it costs nothing.{' '}
-          <strong className="font-semibold text-ink-soft">Extra</strong> = a flat € per qualifying seller.
-          Core weights should add up to 100%. <strong className="font-semibold text-ink-soft">Floor</strong>/
-          <strong className="font-semibold text-ink-soft">cap</strong> set per row where the KPI starts paying and where
-          its attainment stops counting.
+          <strong className="font-semibold text-ink-soft">Core</strong> = mandatory — a weight % of the bonus pool;
+          weights should add up to 100%. <strong className="font-semibold text-ink-soft">Additional</strong> =
+          non-mandatory, pays on top of the pool: a % scored like core and/or a flat € per qualifying seller (use either
+          or both). <strong className="font-semibold text-ink-soft">Floor</strong>/
+          <strong className="font-semibold text-ink-soft">cap</strong> set per row where the % part starts paying and
+          where its attainment stops counting.
         </div>
         <div className="divide-y divide-line">
           {kpis.map((k) => {
             const kk = key(marketId, k.id)
             const role = roles[kk] ?? 'core'
             return (
-              <div key={k.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 px-3 py-2.5">
+              <div key={k.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 px-3 py-2.5">
                 <span className="min-w-0 truncate text-sm font-medium text-ink" title={k.name}>{k.name}</span>
                 <SegmentedControl
                   ariaLabel={`${k.name} role`}
@@ -180,26 +179,24 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                   segments={[
                     { value: 'core', label: 'Core' },
                     { value: 'additional', label: 'Additional' },
-                    { value: 'extra', label: 'Extra' },
                   ]}
                   value={role}
                   onChange={(v) => setRole(k.id, v as BonusRole)}
                 />
-                {role !== 'extra' ? (
-                  <span className="flex items-center justify-end gap-1.5">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      aria-label={`${k.name} weight %`}
-                      value={weights[kk] ?? ''}
-                      onChange={(e) => setWeights((w) => ({ ...w, [kk]: e.target.value }))}
-                      placeholder="0"
-                      className={numInput}
-                    />
-                    <span className="w-14 text-2xs text-ink-muted">{role === 'additional' ? '% on top' : '% of pool'}</span>
-                  </span>
-                ) : (
+                <span className="flex items-center justify-end gap-1.5">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    aria-label={`${k.name} weight %`}
+                    value={weights[kk] ?? ''}
+                    onChange={(e) => setWeights((w) => ({ ...w, [kk]: e.target.value }))}
+                    placeholder="0"
+                    className={numInput}
+                  />
+                  <span className="w-14 text-2xs text-ink-muted">{role === 'additional' ? '% on top' : '% of pool'}</span>
+                </span>
+                {role === 'additional' ? (
                   <span className="flex items-center justify-end gap-1.5">
                     <input
                       type="number"
@@ -213,37 +210,35 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
                     />
                     <span className="w-14 text-2xs text-ink-muted">€/seller</span>
                   </span>
-                )}
-                {role !== 'extra' ? (
-                  <span className="flex items-center justify-end gap-1.5">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      min={0}
-                      aria-label={`${k.name} floor %`}
-                      value={floors[kk] ?? ''}
-                      onChange={(e) => setFloors((f) => ({ ...f, [kk]: e.target.value }))}
-                      placeholder="80"
-                      className={numInputSm}
-                    />
-                    <span className="text-2xs text-ink-muted">floor%</span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      min={0}
-                      aria-label={`${k.name} cap %`}
-                      value={caps[kk] ?? ''}
-                      onChange={(e) => setCaps((c) => ({ ...c, [kk]: e.target.value }))}
-                      placeholder="150"
-                      className={numInputSm}
-                    />
-                    <span className="text-2xs text-ink-muted">cap%</span>
-                  </span>
                 ) : (
                   <span />
                 )}
+                <span className="flex items-center justify-end gap-1.5">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={0}
+                    aria-label={`${k.name} floor %`}
+                    value={floors[kk] ?? ''}
+                    onChange={(e) => setFloors((f) => ({ ...f, [kk]: e.target.value }))}
+                    placeholder="80"
+                    className={numInputSm}
+                  />
+                  <span className="text-2xs text-ink-muted">floor%</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={0}
+                    aria-label={`${k.name} cap %`}
+                    value={caps[kk] ?? ''}
+                    onChange={(e) => setCaps((c) => ({ ...c, [kk]: e.target.value }))}
+                    placeholder="150"
+                    className={numInputSm}
+                  />
+                  <span className="text-2xs text-ink-muted">cap%</span>
+                </span>
               </div>
             )
           })}
@@ -284,8 +279,8 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
       </div>
 
       <p className="text-2xs text-ink-muted">
-        Final payout = base pool × core weights + additional (on-top) weights — each scaled by attainment within its
-        row's floor/cap — plus extra €/seller bonuses. Saved per month — use{' '}
+        Final payout = base pool × core weights (mandatory) + additional bonuses on top (% parts scaled by attainment
+        within each row's floor/cap; €/seller parts gated on a 1st active offer). Saved per month — use{' '}
         <strong className="font-medium text-ink-soft">Copy previous month</strong> to roll a plan forward.
       </p>
     </div>

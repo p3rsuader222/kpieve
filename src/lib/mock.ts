@@ -72,8 +72,8 @@ const LT_CONFIG: ConfigRow[] = [
   ['kpi-assort', 'core', 15, 0],
   ['kpi-late-rate', 'core', 5, 0],
   ['kpi-fbp', 'core', 15, 0],
-  ['kpi-phh', 'extra', 0, 10],
-  ['kpi-phh-live', 'extra', 0, 10],
+  ['kpi-phh', 'additional', 0, 10],
+  ['kpi-phh-live', 'additional', 0, 10],
 ]
 const LVEEPL_CONFIG: ConfigRow[] = [
   ['kpi-active-offer', 'core', 35, 0],
@@ -81,8 +81,8 @@ const LVEEPL_CONFIG: ConfigRow[] = [
   ['kpi-phh', 'core', 10, 0],
   ['kpi-late-rate', 'core', 5, 0],
   ['kpi-assort', 'core', 20, 0],
-  ['kpi-fbp', 'extra', 0, 15],
-  ['kpi-phh-live', 'extra', 0, 10],
+  ['kpi-fbp', 'additional', 0, 15],
+  ['kpi-phh-live', 'additional', 0, 10],
 ]
 
 const MAX_BONUS: Record<string, number> = { 'mem-1': 1000, 'mem-2': 900, 'mem-3': 1100, 'mem-4': 950 }
