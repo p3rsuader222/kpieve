@@ -18,7 +18,7 @@ interface Props {
 }
 
 // Country | Potential (previous calendar month) | 3-month average | Target (editable)
-const COLS = 'minmax(48px,1fr) 64px 64px 84px'
+const COLS = 'minmax(48px,1fr) 76px 76px 88px'
 
 /**
  * Forecast for one KPI: per-country pipeline for `period`, plus an editable
@@ -138,9 +138,10 @@ export function ForecastTable({ data, kpi, period }: Props) {
           style={{ gridTemplateColumns: COLS }}
         >
           <span>Country</span>
-          <span className="text-right text-brand-ink">Potential</span>
-          <span className="text-right">3-mo avg</span>
-          <span className="text-right">Target</span>
+          <span className="whitespace-nowrap text-right text-brand-ink">Potential</span>
+          <span className="whitespace-nowrap text-right">3-mo avg</span>
+          {/* pr matches the input's inner inset so the header edge meets the digits. */}
+          <span className="whitespace-nowrap pr-2.5 text-right">Target</span>
         </div>
         <div className="divide-y divide-line">
           {marketRows.map((r) => (
@@ -174,7 +175,7 @@ export function ForecastTable({ data, kpi, period }: Props) {
               {formatCompact(totalRow.prevActual, kpi.format)}
             </span>
             <span className="tnum text-right text-sm text-ink-soft">{formatCompact(totalRow.avg3, kpi.format)}</span>
-            <span className="tnum pr-2 text-right text-sm font-semibold text-ink">
+            <span className="tnum pr-2.5 text-right text-sm font-semibold text-ink">
               {totalTargetLive != null ? formatCompact(totalTargetLive, kpi.format) : '—'}
             </span>
           </div>
