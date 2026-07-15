@@ -7,16 +7,18 @@ import { useDashboard } from '@/hooks/useDashboard'
 import { useBonusLock } from '@/hooks/useBonusLock'
 import { useConfigMutations } from '@/hooks/useConfigMutations'
 import { useToast } from '@/components/ui/Toast'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 import { BonusGate } from '@/components/bonus/BonusGate'
-import { TeamBonusTable } from '@/components/bonus/TeamBonusTable'
+import { TeamBonusTable, type BonusView } from '@/components/bonus/TeamBonusTable'
 
 function TeamBonusInner() {
   const { data, isLoading } = useDashboard()
   const m = useConfigMutations()
   const toast = useToast()
   const [period, setPeriod] = useState<string | null>(null)
+  const [view, setView] = useState<BonusView>('score')
 
   async function saveBonusPlan(config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) {
     if (usingMockData) {
@@ -52,7 +54,18 @@ function TeamBonusInner() {
             </h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* One control cluster: view toggle + scoring month, aligned on a single line. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <SegmentedControl
+            ariaLabel="Team bonus view"
+            size="sm"
+            segments={[
+              { value: 'score', label: 'Scoreboard' },
+              { value: 'weights', label: 'Weights' },
+            ]}
+            value={view}
+            onChange={(v) => setView(v as BonusView)}
+          />
           <span className="hidden text-xs font-medium text-ink-muted sm:inline">Scoring month</span>
           <MonthNav period={bonusPeriod} onChange={setPeriod} clampFuture={false} />
         </div>
@@ -61,11 +74,11 @@ function TeamBonusInner() {
       <p className="max-w-3xl text-sm text-ink-muted">
         How everyone's bonus is shaping up for{' '}
         <strong className="font-semibold text-ink-soft">{monthLabel}</strong>. Click a person to see their breakdown. Use
-        the <strong className="font-semibold text-ink-soft">Weights</strong> tab to set each market's weights, €/seller
+        the <strong className="font-semibold text-ink-soft">Weights</strong> view to set each market's weights, €/seller
         rates and base pools.
       </p>
 
-      <TeamBonusTable data={data} period={bonusPeriod} saving={saving} onSave={saveBonusPlan} />
+      <TeamBonusTable data={data} period={bonusPeriod} view={view} saving={saving} onSave={saveBonusPlan} />
     </div>
   )
 }

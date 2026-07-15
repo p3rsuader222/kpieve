@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { cn } from '@/lib/cn'
 import { activeKpis, teamBonus, type MemberBonusKpi } from '@/lib/metrics'
 import { formatValue } from '@/lib/format'
@@ -6,44 +6,26 @@ import type { DashboardData } from '@/lib/types'
 import type { BonusBaseUpsert, KpiMarketConfigUpsert } from '@/data/datasource'
 import { Avatar } from '@/components/ui/Avatar'
 import { Flag } from '@/components/ui/Flag'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { BonusPlanEditor } from '@/components/settings/BonusPlanEditor'
+
+export type BonusView = 'score' | 'weights'
 
 interface Props {
   data: DashboardData
   period: string
+  /** Chosen in the page header (next to the month selector). */
+  view: BonusView
   saving: boolean
   onSave: (config: KpiMarketConfigUpsert[], base: BonusBaseUpsert[]) => void
 }
 
-type View = 'score' | 'weights'
-
 const eur = (n: number) => formatValue(n, { format: 'currency' })
 
-export function TeamBonusTable({ data, period, saving, onSave }: Props) {
-  const [view, setView] = useState<View>('score')
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <SegmentedControl
-          ariaLabel="Team bonus view"
-          size="sm"
-          segments={[
-            { value: 'score', label: 'Scoreboard' },
-            { value: 'weights', label: 'Weights' },
-          ]}
-          value={view}
-          onChange={(v) => setView(v as View)}
-        />
-      </div>
-
-      {view === 'score' ? (
-        <Scoreboard data={data} period={period} />
-      ) : (
-        <BonusPlanEditor data={data} period={period} saving={saving} onSave={onSave} />
-      )}
-    </div>
+export function TeamBonusTable({ data, period, view, saving, onSave }: Props) {
+  return view === 'score' ? (
+    <Scoreboard data={data} period={period} />
+  ) : (
+    <BonusPlanEditor data={data} period={period} saving={saving} onSave={onSave} />
   )
 }
 
