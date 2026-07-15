@@ -22,7 +22,7 @@ import { Panel } from '@/components/ui/Panel'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AssortmentEditor } from '@/components/update/AssortmentEditor'
 import { ChangeDetail, EntryCalendar } from '@/components/update/EntryCalendar'
-import { KpiRail } from '@/components/ui/KpiRail'
+import { KpiTabs } from '@/components/ui/KpiTabs'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 
 const keyOf = (kpiId: string, memberId: string, marketId: string) => `${kpiId}:${memberId}:${marketId}`
@@ -166,9 +166,8 @@ export function Update() {
           eyebrow={`${format(parseISO(period), 'MMMM yyyy')} · ${filledForKpi}/${totalForKpi} entered`}
           title={activeKpi.name}
         >
-          <div className="flex flex-col gap-4 lg:flex-row">
-          {/* KPI rail — vertical on desktop, wrapped chips on mobile */}
-          <KpiRail
+          {/* KPI tabs — same underline language as the Settings sections */}
+          <KpiTabs
             ariaLabel="KPI"
             kpis={kpis}
             selectedIds={[activeKpi.id]}
@@ -176,7 +175,7 @@ export function Update() {
           />
 
           {/* Aligned table island */}
-          <div className="min-w-0 flex-1 overflow-x-auto">
+          <div className="mt-4 overflow-x-auto">
             <div className="w-full min-w-[480px] overflow-hidden rounded-xl border border-line">
               <div
                 className="grid items-end gap-2.5 border-b border-line bg-surface-2/50 px-4 py-3"
@@ -243,7 +242,6 @@ export function Update() {
                 ))}
               </div>
             </div>
-          </div>
           </div>
         </Panel>
 

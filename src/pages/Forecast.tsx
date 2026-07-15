@@ -4,7 +4,7 @@ import { CalendarClock, Info } from 'lucide-react'
 import { activeKpis, monthStart } from '@/lib/metrics'
 import { useDashboard } from '@/hooks/useDashboard'
 import { usePersistentState } from '@/hooks/usePersistentState'
-import { KpiRail } from '@/components/ui/KpiRail'
+import { KpiTabs } from '@/components/ui/KpiTabs'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { MonthNav } from '@/components/dashboard/MonthNav'
 import { ForecastTable } from '@/components/forecast/ForecastTable'
@@ -72,31 +72,29 @@ export function Forecast() {
         </span>
       </p>
 
-      {/* KPI rail + forecast cards */}
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <KpiRail
+      {/* KPI tabs (multi-select) + forecast cards */}
+      <div className="space-y-4">
+        <KpiTabs
           ariaLabel="Forecast KPIs"
           kpis={kpis}
           selectedIds={selected}
           onSelect={toggle}
           multi
         />
-        <div className="min-w-0 flex-1">
-          {selectedKpis.length === 0 ? (
-            <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
-              <Info size={16} className="shrink-0 text-brand" />
-              <span>Pick at least one KPI on the left.</span>
-            </div>
-          ) : (
-            /* Auto-fill: as many cards per row as genuinely fit — each card keeps
-               a minimum width so its Target column can never be clipped. */
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
-              {selectedKpis.map((kpi) => (
-                <ForecastTable key={kpi.id} data={data} kpi={kpi} period={forecastPeriod} />
-              ))}
-            </div>
-          )}
-        </div>
+        {selectedKpis.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-soft">
+            <Info size={16} className="shrink-0 text-brand" />
+            <span>Pick at least one KPI above.</span>
+          </div>
+        ) : (
+          /* Auto-fill: as many cards per row as genuinely fit — each card keeps
+             a minimum width so its Target column can never be clipped. */
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
+            {selectedKpis.map((kpi) => (
+              <ForecastTable key={kpi.id} data={data} kpi={kpi} period={forecastPeriod} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
