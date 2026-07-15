@@ -133,7 +133,8 @@ export function AssortmentEditor({ data, period }: Props) {
   const saving = m.saveAssortmentSeller.isPending
 
   return (
-    <div className="space-y-3">
+    // Form editor — content-width, not page-width: seller inputs stay next to names.
+    <div className="max-w-[880px] space-y-3">
       {/* Member picker */}
       <div className="flex flex-wrap items-center gap-1.5">
         {members.map((mem) => {

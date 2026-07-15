@@ -124,7 +124,9 @@ export function BonusPlanEditor({ data, period, saving, onSave }: Props) {
   const market = markets.find((m) => m.id === marketId) as Market | undefined
 
   return (
-    <div className="space-y-4">
+    // Form editor — content-width, not page-width: rows keep their controls
+    // next to the KPI names instead of drifting across a wide screen.
+    <div className="max-w-[1080px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-ink-soft">
           Plan for <strong className="font-semibold text-ink">{monthLabel}</strong>
